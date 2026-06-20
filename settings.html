@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat2KB — 设置</title>
+  <style>
+    :root {
+      --bg-primary: #0a0f1a;
+      --bg-secondary: #111827;
+      --bg-card: #151d2e;
+      --border-color: rgba(255,255,255,0.08);
+      --text-primary: #f0f4f8;
+      --text-secondary: #94a3b8;
+      --accent-cyan: #00d4ff;
+      --accent-purple: #a855f7;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(0,212,255,0.08) 0%, transparent 40%),
+                  radial-gradient(circle at 80% 80%, rgba(168,85,247,0.08) 0%, transparent 40%),
+                  var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .brand {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      transition: all 0.2s;
+    }
+
+    .back-btn:hover {
+      color: var(--accent-cyan);
+      border-color: rgba(0,212,255,0.3);
+      background: rgba(0,212,255,0.06);
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .section-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+      color: #0a0f1a;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 0 20px rgba(0,212,255,0.25);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      color: var(--text-primary);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .status-badge.ok {
+      color: var(--success);
+      border-color: rgba(34,197,94,0.3);
+      background: rgba(34,197,94,0.08);
+    }
+
+    .status-badge.pending {
+      color: var(--warning);
+      border-color: rgba(245,158,11,0.3);
+      background: rgba(245,158,11,0.08);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      color: var(--text-primary);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+
+    @media (max-width: 640px) {
+      .container { padding: 20px 16px 40px; }
+      .card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">Chat2KB Settings</div>
+      <a href="chat.html" class="back-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        返回对话
+      </a>
+    </div>
+
+    <!-- 环境 API 设置 -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+        环境 API 设置
+        <span class="status-badge pending" id="adminStatus">未测试</span>
+      </div>
+      <div class="form-group">
+        <label for="adminBase">Admin API Base URL</label>
+        <input type="text" id="adminBase" placeholder="https://api-dev.apecloud.cn/admin/v1/">
+        <div class="hint">例如 ApeCloud Admin API 的 base URL，以 <code>/v1/</code> 结尾。</div>
+      </div>
+      <div class="form-group">
+        <label for="adminAccessKey">Access Key</label>
+        <input type="password" id="adminAccessKey" placeholder="用于 Digest 认证的用户名">
+      </div>
+      <div class="form-group">
+        <label for="adminSecretKey">Secret Key</label>
+        <input type="password" id="adminSecretKey" placeholder="用于 Digest 认证的密码">
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-secondary" id="adminTestBtn" type="button">测试连接</button>
+        <button class="btn btn-primary" id="adminSaveBtn" type="button" disabled>保存环境设置</button>
+      </div>
+    </div>
+
+    <!-- 大模型设置 -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a10 10 0 1 0 10 10H12V2z"/>
+          <path d="M12 2a10 10 0 0 1 10 10"/>
+          <path d="M12 12l7-7"/>
+        </svg>
+        大模型设置
+        <span class="status-badge pending" id="llmStatus">未测试</span>
+      </div>
+      <div class="form-group">
+        <label for="llmModel">模型</label>
+        <select id="llmModel">
+          <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+          <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
+          <option value="kimi-k2.5">Kimi k2.5</option>
+          <option value="kimi-k2.6">Kimi k2.6</option>
+          <option value="moonshot-v1-8k">Moonshot v1 8k</option>
+          <option value="moonshot-v1-32k">Moonshot v1 32k</option>
+          <option value="custom">自定义模型</option>
+        </select>
+      </div>
+      <div class="form-group" id="customModelGroup" style="display:none;">
+        <label for="customModel">自定义模型名</label>
+        <input type="text" id="customModel" placeholder="例如 my-custom-model">
+      </div>
+      <div class="form-group" id="llmBaseGroup">
+        <label for="llmBase">API Base URL</label>
+        <input type="text" id="llmBase" placeholder="留空则根据模型自动选择">
+        <div class="hint">Kimi 默认 <code>https://api.moonshot.cn/v1</code>，DeepSeek 默认 <code>https://api.deepseek.com/v1</code>。</div>
+      </div>
+      <div class="form-group">
+        <label for="llmApiId">API ID（可选）</label>
+        <input type="text" id="llmApiId" placeholder="部分服务商需要的 API ID / Organization ID">
+      </div>
+      <div class="form-group">
+        <label for="llmApiKey">API Key</label>
+        <input type="password" id="llmApiKey" placeholder="大模型服务的 API Key">
+      </div>
+      <div class="hint">
+        设置保存在服务端 SQLite 数据库（<code>chat2kb.db</code>），刷新页面或重启浏览器后仍然有效。若留空则使用服务端 <code>.dev.vars</code> 里的默认配置。
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-secondary" id="llmTestBtn" type="button">测试连接</button>
+        <button class="btn btn-primary" id="llmSaveBtn" type="button" disabled>保存模型设置</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const fields = {
+      adminBase: document.getElementById('adminBase'),
+      adminAccessKey: document.getElementById('adminAccessKey'),
+      adminSecretKey: document.getElementById('adminSecretKey'),
+      llmModel: document.getElementById('llmModel'),
+      customModel: document.getElementById('customModel'),
+      llmBase: document.getElementById('llmBase'),
+      llmApiId: document.getElementById('llmApiId'),
+      llmApiKey: document.getElementById('llmApiKey'),
+    };
+    const customModelGroup = document.getElementById('customModelGroup');
+    const llmBaseGroup = document.getElementById('llmBaseGroup');
+    const adminTestBtn = document.getElementById('adminTestBtn');
+    const adminSaveBtn = document.getElementById('adminSaveBtn');
+    const adminStatus = document.getElementById('adminStatus');
+    const llmTestBtn = document.getElementById('llmTestBtn');
+    const llmSaveBtn = document.getElementById('llmSaveBtn');
+    const llmStatus = document.getElementById('llmStatus');
+    const toast = document.getElementById('toast');
+
+    let adminTested = false;
+    let llmTested = false;
+    let loadedAdmin = {};
+    let loadedLlm = {};
+
+    function getAdminPayload() {
+      return {
+        adminBase: fields.adminBase.value.trim(),
+        adminAccessKey: fields.adminAccessKey.value.trim(),
+        adminSecretKey: fields.adminSecretKey.value.trim(),
+      };
+    }
+
+    function defaultLlmBase(model) {
+      if (model.startsWith('deepseek')) return 'https://api.deepseek.com/v1';
+      if (model.startsWith('kimi') || model.startsWith('moonshot')) return 'https://api.moonshot.cn/v1';
+      return '';
+    }
+
+    function getLlmPayload() {
+      const model = fields.llmModel.value === 'custom'
+        ? (fields.customModel.value.trim() || 'kimi-k2.6')
+        : fields.llmModel.value;
+      const base = fields.llmBase.value.trim() || defaultLlmBase(model);
+      return {
+        llmModel: model,
+        llmBase: base,
+        customModel: fields.customModel.value.trim(),
+        llmApiId: fields.llmApiId.value.trim(),
+        llmApiKey: fields.llmApiKey.value.trim(),
+      };
+    }
+
+    function setStatus(el, tested) {
+      if (tested) {
+        el.textContent = '已测试';
+        el.className = 'status-badge ok';
+      } else {
+        el.textContent = '未测试';
+        el.className = 'status-badge pending';
+      }
+    }
+
+    function valuesEqual(a, b, keys) {
+      return keys.every(k => (a[k] || '') === (b[k] || ''));
+    }
+
+    function onAdminChange() {
+      const current = getAdminPayload();
+      const same = valuesEqual(current, loadedAdmin, ['adminBase', 'adminAccessKey', 'adminSecretKey']);
+      adminTested = same ? true : false;
+      adminSaveBtn.disabled = !adminTested;
+      setStatus(adminStatus, adminTested);
+    }
+
+    function onLlmChange() {
+      const current = getLlmPayload();
+      const same = valuesEqual(current, loadedLlm, ['llmModel', 'llmApiId', 'llmApiKey', 'customModel', 'llmBase']);
+      llmTested = same ? true : false;
+      llmSaveBtn.disabled = !llmTested;
+      setStatus(llmStatus, llmTested);
+    }
+
+    function onModelSelect() {
+      const model = fields.llmModel.value;
+      if (model !== 'custom' && !fields.llmBase.value.trim()) {
+        fields.llmBase.value = defaultLlmBase(model);
+      }
+      toggleCustom();
+      onLlmChange();
+    }
+
+    async function loadSettings() {
+      try {
+        const resp = await fetch('/api/settings');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const s = await resp.json();
+
+        fields.adminBase.value = s.adminBase || '';
+        fields.adminAccessKey.value = s.adminAccessKey || '';
+        fields.adminSecretKey.value = s.adminSecretKey || '';
+        fields.llmModel.value = s.llmModel || 'deepseek-v4-pro';
+        fields.customModel.value = s.customModel || '';
+        fields.llmBase.value = s.llmBase || '';
+        fields.llmApiId.value = s.llmApiId || '';
+        fields.llmApiKey.value = s.llmApiKey || '';
+
+        loadedAdmin = {
+          adminBase: s.adminBase || '',
+          adminAccessKey: s.adminAccessKey || '',
+          adminSecretKey: s.adminSecretKey || '',
+        };
+        loadedLlm = {
+          llmModel: s.llmModel || 'deepseek-v4-pro',
+          customModel: s.customModel || '',
+          llmBase: s.llmBase || '',
+          llmApiId: s.llmApiId || '',
+          llmApiKey: s.llmApiKey || '',
+        };
+
+        // Values loaded from DB are considered already tested/saved
+        adminTested = true;
+        llmTested = true;
+        adminSaveBtn.disabled = false;
+        llmSaveBtn.disabled = false;
+        setStatus(adminStatus, true);
+        setStatus(llmStatus, true);
+      } catch (e) {
+        console.warn('读取设置失败', e);
+        showToast('读取设置失败', 'error');
+      }
+      toggleCustom();
+    }
+
+    async function testAdmin() {
+      const payload = getAdminPayload();
+      if (!payload.adminBase || !payload.adminAccessKey || !payload.adminSecretKey) {
+        showToast('请填写完整的环境 API 信息', 'error');
+        return;
+      }
+      adminTestBtn.disabled = true;
+      adminTestBtn.textContent = '测试中...';
+      try {
+        const resp = await fetch('/api/test/admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+          adminTested = true;
+          adminSaveBtn.disabled = false;
+          setStatus(adminStatus, true);
+          showToast('环境 API 连接成功', 'success');
+        } else {
+          adminTested = false;
+          adminSaveBtn.disabled = true;
+          setStatus(adminStatus, false);
+          showToast(data.error || '连接失败', 'error');
+        }
+      } catch (e) {
+        showToast('测试请求失败: ' + e.message, 'error');
+      } finally {
+        adminTestBtn.disabled = false;
+        adminTestBtn.textContent = '测试连接';
+      }
+    }
+
+    async function saveAdmin() {
+      if (!adminTested) {
+        showToast('请先点击「测试连接」', 'error');
+        return;
+      }
+      const payload = {
+        ...(await fetch('/api/settings').then(r => r.json())),
+        ...getAdminPayload(),
+      };
+      try {
+        const resp = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        loadedAdmin = getAdminPayload();
+        showToast('环境设置已保存', 'success');
+      } catch (e) {
+        showToast('保存失败: ' + e.message, 'error');
+      }
+    }
+
+    async function testLlm() {
+      const payload = getLlmPayload();
+      if (!payload.llmApiKey) {
+        showToast('请填写 API Key', 'error');
+        return;
+      }
+      llmTestBtn.disabled = true;
+      llmTestBtn.textContent = '测试中...';
+      try {
+        const resp = await fetch('/api/test/llm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+          llmTested = true;
+          llmSaveBtn.disabled = false;
+          setStatus(llmStatus, true);
+          showToast('大模型 API 连接成功', 'success');
+        } else {
+          llmTested = false;
+          llmSaveBtn.disabled = true;
+          setStatus(llmStatus, false);
+          showToast(data.error || '连接失败', 'error');
+        }
+      } catch (e) {
+        showToast('测试请求失败: ' + e.message, 'error');
+      } finally {
+        llmTestBtn.disabled = false;
+        llmTestBtn.textContent = '测试连接';
+      }
+    }
+
+    async function saveLlm() {
+      if (!llmTested) {
+        showToast('请先点击「测试连接」', 'error');
+        return;
+      }
+      const payload = {
+        ...(await fetch('/api/settings').then(r => r.json())),
+        ...getLlmPayload(),
+      };
+      try {
+        const resp = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        loadedLlm = getLlmPayload();
+        showToast('模型设置已保存', 'success');
+      } catch (e) {
+        showToast('保存失败: ' + e.message, 'error');
+      }
+    }
+
+    function toggleCustom() {
+      customModelGroup.style.display = fields.llmModel.value === 'custom' ? 'block' : 'none';
+    }
+
+    let toastTimer;
+    function showToast(msg, type) {
+      toast.textContent = msg;
+      toast.className = 'toast show ' + type;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    fields.adminBase.addEventListener('input', onAdminChange);
+    fields.adminAccessKey.addEventListener('input', onAdminChange);
+    fields.adminSecretKey.addEventListener('input', onAdminChange);
+    adminTestBtn.addEventListener('click', testAdmin);
+    adminSaveBtn.addEventListener('click', saveAdmin);
+
+    fields.llmModel.addEventListener('change', onModelSelect);
+    fields.customModel.addEventListener('input', onLlmChange);
+    fields.llmBase.addEventListener('input', onLlmChange);
+    fields.llmApiId.addEventListener('input', onLlmChange);
+    fields.llmApiKey.addEventListener('input', onLlmChange);
+    llmTestBtn.addEventListener('click', testLlm);
+    llmSaveBtn.addEventListener('click', saveLlm);
+
+    loadSettings();
+  </script>
+</body>
+</html>

@@ -13,7 +13,9 @@ Chat2KB 是一个面向 KubeBlocks 生态的对话式智能入口，提供：
 本项目包含：
 
 - `index.html`：Landing Page（响应式、动效、环境矩阵、场景用例）。
-- `chat.html`：对话界面（支持环境切换、建议问题快捷输入）。
+- `chat.html`：对话界面（支持环境切换、建议问题快捷输入、设置入口）。
+- `settings.html`：设置页面，可在浏览器中配置环境 API 与大模型 API Key。
+- `server.py`：本地 Python 开发服务器，托管静态文件并处理 `/api/chat`。
 - `functions/api/chat.js`：Cloudflare Pages Function 后端，负责调用 Kimi 大模型与 dev admin API。
 - `changelog.html`：更新日志。
 
@@ -24,7 +26,24 @@ Chat2KB 是一个面向 KubeBlocks 生态的对话式智能入口，提供：
 
 ## 本地运行
 
-### 前端静态预览
+### 方式一：Python 本地服务器（推荐，含后端 API）
+
+`server.py` 同时提供静态文件服务和 `POST /api/chat`，无需 Wrangler：
+
+```bash
+cd /Users/wangruijun/workspace/chat2kb
+python3 server.py 8080
+# 访问 http://localhost:8080/chat.html?env=dev
+```
+
+启动时会自动创建 SQLite 数据库 `chat2kb.db`，并默认写入 `.dev.vars` 中的 dev 环境信息以及 `kimi-k2.6` 大模型配置。也可以在 `chat.html` 右上角进入「设置」页面进行修改：
+
+- 环境 Admin API Base URL / Access Key / Secret Key
+- 大模型模型（如 `kimi-k2.6`）/ API ID / API Key
+
+设置保存在服务端 SQLite 中，刷新页面或重启浏览器后仍然有效；留空则回退到 `.dev.vars` 的默认值。`chat2kb.db` 已加入 `.gitignore`，不会提交。
+
+### 方式二：纯静态预览
 
 ```bash
 cd /Users/wangruijun/workspace/chat2kb
@@ -32,9 +51,9 @@ python3 -m http.server 8080
 # 访问 http://localhost:8080
 ```
 
-此时 `chat.html` 会优先调用 `/api/chat`；如果后端不可用，会自动降级为本地模拟回复。
+此时 `chat.html` 会优先调用 `/api/chat`；由于纯静态服务器不支持 POST，后端不可用时自动降级为本地模拟回复。
 
-### 完整功能预览（含后端）
+### 方式三：Wrangler（Cloudflare Pages Functions）
 
 需要安装 [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/)：
 
@@ -46,7 +65,7 @@ wrangler pages dev .
 # 访问 http://localhost:8788
 ```
 
-`.dev.vars` 中默认已包含 Kimi API Key 与 dev admin API Key（dev admin API Base URL 为占位符，需替换为真实地址）。
+`.dev.vars` 中默认已包含 Kimi API Key 与 dev admin API Key。
 
 ## 项目结构
 
@@ -54,7 +73,9 @@ wrangler pages dev .
 chat2kb/
 ├── index.html              # 落地页
 ├── chat.html               # 对话页
+├── settings.html           # 设置页面
 ├── changelog.html          # 更新日志
+├── server.py               # Python 本地开发服务器
 ├── functions/
 │   └── api/
 │       └── chat.js         # Cloudflare Pages Function 后端
@@ -92,6 +113,7 @@ chat2kb/
 - 模拟运营数据卡片（高意向客户、资源利用率等）
 - 模拟知识库回答（Redis/MySQL/备份/报错等）
 - 建议问题快捷输入
+- 右上角设置入口，跳转 `settings.html`
 - 响应式布局
 
 ## 技术栈
@@ -100,7 +122,7 @@ chat2kb/
 - CSS3（变量、Flex/Grid、动画、响应式）
 - 原生 JavaScript（Canvas 粒子、IntersectionObserver、URLSearchParams）
 - Cloudflare Pages Functions（后端）
-- Kimi (Moonshot) API（大模型）
+- Kimi (Moonshot) / DeepSeek API（大模型，OpenAI-compatible）
 - Digest 认证调用 dev admin API
 - Google Fonts（Inter / JetBrains Mono）
 
