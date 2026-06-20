@@ -58,6 +58,8 @@ chat2kb/
 ├── functions/
 │   └── api/
 │       └── chat.js         # Cloudflare Pages Function 后端
+├── lib/
+│   └── md5.js              # 纯 JS MD5 实现（用于 Digest 认证）
 ├── wrangler.toml           # Wrangler / Pages 配置
 ├── .dev.vars               # 本地密钥（不提交到 git）
 ├── prd_chat2kb_landing.md  # 产品需求文档
@@ -99,6 +101,7 @@ chat2kb/
 - 原生 JavaScript（Canvas 粒子、IntersectionObserver、URLSearchParams）
 - Cloudflare Pages Functions（后端）
 - Kimi (Moonshot) API（大模型）
+- Digest 认证调用 dev admin API
 - Google Fonts（Inter / JetBrains Mono）
 
 ## 说明
@@ -111,18 +114,20 @@ chat2kb/
 |--------|------|
 | `KIMI_API_KEY` | Kimi (Moonshot) API Key |
 | `ADMIN_DEV_API_BASE` | dev 开发环境 admin API 根地址 |
-| `ADMIN_DEV_API_KEY` | dev 开发环境 admin API Key |
+| `ADMIN_DEV_API_USER` | dev admin API Digest 认证用户名 |
+| `ADMIN_DEV_API_PASS` | dev admin API Digest 认证密码 |
+| `ADMIN_DEV_API_PATH` | dev admin API 路径，默认 `/admin/v1/organizations` |
 
 ### dev admin API 接入说明
 
-`functions/api/chat.js` 已默认在 `userEnv === 'dev'` 时尝试调用：
+`functions/api/chat.js` 已默认在 `userEnv === 'dev'` 时使用 **Digest 认证**调用：
 
 ```
-GET ${ADMIN_DEV_API_BASE}/api/v1/clusters
-Authorization: Bearer ${ADMIN_DEV_API_KEY}
+GET ${ADMIN_DEV_API_BASE}${ADMIN_DEV_API_PATH}
+Authorization: Digest username="...", realm="...", ...
 ```
 
-如果实际接口路径或认证方式不同，请修改 `functions/api/chat.js` 中的请求逻辑。
+默认路径为 `/admin/v1/organizations`。如果实际接口路径、认证方式或返回结构不同，请修改 `functions/api/chat.js` 中的请求逻辑。
 
 ## 部署到 Cloudflare Pages
 
