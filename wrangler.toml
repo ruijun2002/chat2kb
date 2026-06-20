@@ -1,5 +1,5 @@
 name = "chat2kb"
-compatibility_date = "2026-06-17"
+compatibility_date = "2026-06-16"
 
 # Cloudflare Pages 配置：静态资源输出目录为当前目录根
 pages_build_output_dir = "."
