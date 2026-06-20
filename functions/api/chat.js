@@ -126,7 +126,9 @@ export async function onRequestPost(context) {
   let devApiOk = false;
 
   if (userEnv === 'dev' && env.ADMIN_DEV_API_BASE) {
-    const path = env.ADMIN_DEV_API_PATH || '/admin/v1/organizations';
+    let path = env.ADMIN_DEV_API_PATH || '/admin/v1/organizations';
+    // 如果配置的是 API base path（以 / 结尾），默认请求 organizations 资源
+    if (path.endsWith('/')) path += 'organizations';
     const adminUrl = `${env.ADMIN_DEV_API_BASE.replace(/\/$/, '')}${path}`;
     try {
       let adminResp;
