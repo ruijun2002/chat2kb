@@ -15,7 +15,7 @@
  *   https://console-dev.apecloud.cn/docs/developer-guides/api/adminapi/admin-api
  */
 
-import md5 from '../lib/md5.js';
+import md5 from '../../lib/md5.js';
 
 const KIMI_BASE = 'https://api.moonshot.cn/v1';
 const KIMI_MODEL = 'kimi-k2.5';
