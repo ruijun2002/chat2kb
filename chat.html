@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat2KB — 对话</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0A0E1A;
+      --bg-secondary: #111827;
+      --bg-tertiary: #1F2937;
+      --accent-cyan: #00D4FF;
+      --accent-purple: #7C3AED;
+      --accent-green: #10B981;
+      --accent-orange: #F59E0B;
+      --text-primary: #F9FAFB;
+      --text-secondary: #9CA3AF;
+      --text-muted: #6B7280;
+      --border-subtle: rgba(0, 212, 255, 0.1);
+      --border-hover: rgba(0, 212, 255, 0.3);
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 3px; }
+
+    #particle-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(10, 14, 26, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .back-btn:hover {
+      color: var(--accent-cyan);
+      border-color: var(--border-hover);
+      background: rgba(0,212,255,0.08);
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .env-selector {
+      position: relative;
+    }
+
+    .env-select {
+      appearance: none;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 8px 32px 8px 14px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .env-select:hover, .env-select:focus {
+      border-color: var(--border-hover);
+    }
+
+    .env-selector::after {
+      content: '▼';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    /* Chat Area */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 24px 120px;
+    }
+
+    .chat-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .message.user {
+      flex-direction: row-reverse;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .message.ai .avatar {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .message.user .avatar {
+      background: rgba(0, 212, 255, 0.1);
+      border-color: rgba(0, 212, 255, 0.2);
+    }
+
+    .bubble {
+      max-width: min(560px, calc(100% - 60px));
+      padding: 14px 18px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .message.ai .bubble {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-top-left-radius: 4px;
+      color: var(--text-primary);
+    }
+
+    .message.user .bubble {
+      background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(124,58,237,0.15));
+      border: 1px solid var(--border-subtle);
+      border-top-right-radius: 4px;
+      color: var(--text-primary);
+    }
+
+    .meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      padding: 0 4px;
+    }
+
+    .message.user .meta {
+      text-align: right;
+    }
+
+    /* Typing */
+    .typing {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      height: 20px;
+    }
+
+    .typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      animation: typing 1.4s infinite ease-in-out both;
+    }
+
+    .typing span:nth-child(1) { animation-delay: -0.32s; }
+    .typing span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes typing {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    /* Data Cards inside AI bubble */
+    .data-card {
+      background: rgba(0, 212, 255, 0.05);
+      border: 1px solid rgba(0, 212, 255, 0.15);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 10px 0;
+    }
+
+    .data-title {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px;
+    }
+
+    .data-row:last-child { border-bottom: none; }
+
+    .data-label { color: var(--text-secondary); }
+    .data-value {
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .data-value.up { color: var(--accent-green); }
+    .data-value.down { color: var(--accent-orange); }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent-cyan);
+    }
+
+    /* Suggestions */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+      padding-left: 48px;
+    }
+
+    .chip {
+      padding: 8px 14px;
+      border-radius: 100px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip:hover {
+      border-color: var(--border-hover);
+      color: var(--accent-cyan);
+      background: rgba(0,212,255,0.08);
+    }
+
+    /* Input Area */
+    .input-area {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 24px 24px;
+      background: linear-gradient(to top, var(--bg-primary) 70%, transparent);
+      z-index: 100;
+    }
+
+    .input-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .input-container:focus-within {
+      border-color: var(--border-hover);
+      box-shadow: 0 0 20px rgba(0,212,255,0.1);
+    }
+
+    .input-field {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 15px;
+      line-height: 1.5;
+      resize: none;
+      max-height: 120px;
+      min-height: 24px;
+      font-family: var(--font-sans);
+    }
+
+    .input-field::placeholder { color: var(--text-muted); }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover { color: var(--accent-cyan); background: rgba(0,212,255,0.08); }
+
+    .send-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent-cyan);
+      color: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .send-btn:hover {
+      box-shadow: 0 0 16px rgba(0,212,255,0.4);
+      transform: translateY(-1px);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .input-hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .header { padding: 0 16px; }
+      .brand { font-size: 16px; }
+      .header-status span:last-child { display: none; }
+      .chat-area { padding: 20px 16px 120px; }
+      .bubble { max-width: calc(100% - 56px); padding: 12px 14px; font-size: 14px; }
+      .suggestions { padding-left: 0; }
+      .input-area { padding: 12px 16px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="particle-canvas"></canvas>
+
+  <div class="app">
+    <header class="header">
+      <div class="header-left">
+        <a href="index.html" class="back-btn" title="返回首页">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </a>
+        <div class="brand">Chat2KB</div>
+      </div>
+
+      <div class="env-selector">
+        <select class="env-select" id="envSelect">
+          <option value="general">通用模式</option>
+          <option value="dev">🔧 dev 开发环境</option>
+          <option value="apecloud">🇨🇳 apecloud.cn</option>
+          <option value="kubeblocks">🌐 kubeblocks.io</option>
+        </select>
+      </div>
+
+      <div class="header-status">
+        <span class="status-dot"></span>
+        <span>AI Engine Online</span>
+      </div>
+    </header>
+
+    <main class="chat-area" id="chatArea">
+      <div class="chat-container" id="chatContainer">
+        <!-- Messages will be injected here -->
+      </div>
+    </main>
+
+    <div class="input-area">
+      <div class="input-container">
+        <textarea class="input-field" id="inputField" rows="1" placeholder="输入问题，按 Enter 发送..."></textarea>
+        <div class="input-actions">
+          <button class="icon-btn" title="附件" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
+          <button class="send-btn" id="sendBtn" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="input-hint">Chat2KB 目前为演示模式，回复为模拟数据</div>
+    </div>
+  </div>
+
+  <script>
+    // ─── Environment Config ───
+    const envConfig = {
+      general: {
+        name: '通用模式',
+        context: '通用知识库与运营洞察入口',
+        placeholder: '输入问题，例如：Redis 集群高可用怎么配置？',
+        suggestions: ['Redis 集群高可用怎么配置？', '本周高意向客户有哪些？', '三个环境资源利用率对比？', '怎么配置备份策略？']
+      },
+      dev: {
+        name: 'dev 开发环境',
+        context: 'dev 开发测试环境',
+        placeholder: '例如：dev 环境有多少集群？',
+        suggestions: ['dev 环境集群数统计', 'dev 资源利用率如何？', '最近 7 天活跃组织', '资源浪费 Top 10']
+      },
+      apecloud: {
+        name: 'apecloud.cn',
+        context: 'apecloud.cn 中文站',
+        placeholder: '例如：本周有哪些新注册客户？',
+        suggestions: ['本周高意向客户 TOP 5', '本月新注册组织有多少？', '活跃用户趋势', '沉默客户预警']
+      },
+      kubeblocks: {
+        name: 'kubeblocks.io',
+        context: 'kubeblocks.io 海外站',
+        placeholder: '例如：海外站最新访问趋势？',
+        suggestions: ['海外站注册组织趋势', '最近 30 天活跃用户', '热门文档查询', '集群创建转化率']
+      }
+    };
+
+    function getEnvFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const env = params.get('env');
+      return envConfig[env] ? env : 'general';
+    }
+
+    let currentEnv = getEnvFromUrl();
+    let isTyping = false;
+
+    // ─── DOM Elements ───
+    const chatArea = document.getElementById('chatArea');
+    const chatContainer = document.getElementById('chatContainer');
+    const inputField = document.getElementById('inputField');
+    const sendBtn = document.getElementById('sendBtn');
+    const envSelect = document.getElementById('envSelect');
+
+    // ─── Particle Background ───
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.size = Math.random() * 2 + 0.5;
+        this.opacity = Math.random() * 0.4 + 0.1;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) this.reset();
+      }
+      draw() {
+        ctx.fillStyle = `rgba(0, 212, 255, ${this.opacity})`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+      }
+    }
+
+    function initParticles() {
+      particles = [];
+      const count = Math.min(200, Math.floor((canvas.width * canvas.height) / 6000));
+      for (let i = 0; i < count; i++) particles.push(new Particle());
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(animateParticles);
+    }
+
+    resizeCanvas();
+    initParticles();
+    animateParticles();
+    window.addEventListener('resize', () => { resizeCanvas(); initParticles(); });
+
+    // ─── Chat Functions ───
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function scrollToBottom() {
+      chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
+    }
+
+    function addMessage(role, content, html = false) {
+      const msg = document.createElement('div');
+      msg.className = `message ${role}`;
+      const avatarIcon = role === 'ai' ? '🤖' : '👤';
+      msg.innerHTML = `
+        <div class="avatar">${avatarIcon}</div>
+        <div>
+          <div class="bubble">${html ? content : escapeHtml(content)}</div>
+          <div class="meta">${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})}</div>
+        </div>
+      `;
+      chatContainer.appendChild(msg);
+      scrollToBottom();
+      return msg;
+    }
+
+    function showTyping() {
+      const msg = document.createElement('div');
+      msg.className = 'message ai typing-msg';
+      msg.innerHTML = `
+        <div class="avatar">🤖</div>
+        <div>
+          <div class="bubble">
+            <div class="typing"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      `;
+      chatContainer.appendChild(msg);
+      scrollToBottom();
+      return msg;
+    }
+
+    function removeTyping() {
+      const typing = document.querySelector('.typing-msg');
+      if (typing) typing.remove();
+    }
+
+    function renderSuggestions() {
+      const existing = document.querySelector('.suggestions');
+      if (existing) existing.remove();
+
+      const suggestions = envConfig[currentEnv].suggestions;
+      const wrap = document.createElement('div');
+      wrap.className = 'suggestions';
+      suggestions.forEach(text => {
+        const chip = document.createElement('button');
+        chip.className = 'chip';
+        chip.textContent = text;
+        chip.type = 'button';
+        chip.onclick = () => sendMessage(text);
+        wrap.appendChild(chip);
+      });
+      chatContainer.appendChild(wrap);
+      scrollToBottom();
+    }
+
+    function setEnv(env) {
+      currentEnv = env;
+      envSelect.value = env;
+      inputField.placeholder = envConfig[env].placeholder;
+      const existing = document.querySelector('.suggestions');
+      if (existing) existing.remove();
+      addMessage('ai', `已切换到 **${envConfig[env].name}** 环境。\n${envConfig[env].context}，你可以直接提问。`, true);
+      renderSuggestions();
+      const url = new URL(window.location);
+      url.searchParams.set('env', env);
+      window.history.replaceState({}, '', url);
+    }
+
+    // ─── Response Generation ───
+    function generateResponse(query) {
+      const q = query.toLowerCase();
+      const env = currentEnv;
+
+      const isOps = /客户|高意向|注册|活跃|试用|沉默|转化|资源|集群|利用率|成本|浪费|top|环境/.test(q);
+      const isKb = /redis|mysql|postgresql|pg|备份|报错|error|高可用|配置|poc|性能|新特性|版本|api|区别|怎么|如何/.test(q);
+
+      // Operations insights
+      if (isOps && !isKb) {
+        if (env === 'apecloud') {
+          if (/高意向|意向|top/.test(q)) {
+            return `根据 apecloud.cn 最近 7 天行为数据，发现 3 个高意向客户：
+<div class="data-card">
+  <div class="data-title">高意向客户 TOP 3</div>
+  <div class="data-row"><span class="data-label">上汽集团</span><span class="data-value up">评分 92 ▲</span></div>
+  <div class="data-row"><span class="data-label">新华三</span><span class="data-value up">评分 87 ▲</span></div>
+  <div class="data-row"><span class="data-label">得物</span><span class="data-value up">评分 85 ▲</span></div>
+</div>
+建议优先跟进上汽集团，其团队在过去 3 天内创建了 4 个测试集群。`;
+          }
+          if (/注册|新/.test(q)) {
+            return `本周 apecloud.cn 新增注册组织 <strong>12 家</strong>，环比上周增长 20%。
+<div class="data-card">
+  <div class="data-title">本周新注册组织</div>
+  <div class="data-row"><span class="data-label">周一</span><span class="data-value">3</span></div>
+  <div class="data-row"><span class="data-label">周二</span><span class="data-value">2</span></div>
+  <div class="data-row"><span class="data-label">周三</span><span class="data-value">4</span></div>
+  <div class="data-row"><span class="data-label">周四</span><span class="data-value">1</span></div>
+  <div class="data-row"><span class="data-label">周五</span><span class="data-value">2</span></div>
+</div>`;
+          }
+          if (/活跃|登录/.test(q)) {
+            return `apecloud.cn 近 30 天活跃用户为 <strong>116 人</strong>，覆盖 58 家组织。
+<div class="data-card">
+  <div class="data-title">活跃度分布</div>
+  <div class="data-row"><span class="data-label">高频用户（>10 次/周）</span><span class="data-value">23</span></div>
+  <div class="data-row"><span class="data-label">中频用户（3-10 次/周）</span><span class="data-value">41</span></div>
+  <div class="data-row"><span class="data-label">低频用户（<3 次/周）</span><span class="data-value">52</span></div>
+</div>`;
+          }
+          if (/沉默/.test(q)) {
+            return `发现 6 家组织过去 30 天未登录 apecloud.cn，建议通过邮件或客户成功进行唤醒。`;
+          }
+          return `apecloud.cn 当前环境概览：
+<div class="data-card">
+  <div class="data-title">环境数据速览</div>
+  <div class="data-row"><span class="data-label">注册组织</span><span class="data-value">188</span></div>
+  <div class="data-row"><span class="data-label">活跃用户</span><span class="data-value">116</span></div>
+  <div class="data-row"><span class="data-label">集群总数</span><span class="data-value">8</span></div>
+</div>
+你可以继续询问“高意向客户”、“资源利用率”等。`;
+        }
+
+        if (env === 'dev') {
+          if (/集群/.test(q)) {
+            return `dev 环境当前运行 <strong>12</strong> 个集群，分布在 3 个命名空间。
+<div class="data-card">
+  <div class="data-title">集群类型分布</div>
+  <div class="data-row"><span class="data-label">MySQL</span><span class="data-value">5</span></div>
+  <div class="data-row"><span class="data-label">PostgreSQL</span><span class="data-value">4</span></div>
+  <div class="data-row"><span class="data-label">Redis</span><span class="data-value">3</span></div>
+</div>`;
+          }
+          if (/资源|利用率|浪费/.test(q)) {
+            return `dev 环境整体资源利用率为 <strong>67%</strong>，处于健康区间。
+<div class="data-card">
+  <div class="data-title">资源利用率</div>
+  <div class="data-row"><span class="data-label">CPU</span><span class="data-value">62%</span></div>
+  <div class="data-row"><span class="data-label">内存</span><span class="data-value">71%</span></div>
+  <div class="data-row"><span class="data-label">存储</span><span class="data-value">58%</span></div>
+  <div class="progress-bar"><div class="progress-fill" style="width:67%"></div></div>
+</div>
+建议关注存储增长趋势。`;
+          }
+          return `dev 开发环境概览：
+<div class="data-card">
+  <div class="data-title">环境数据速览</div>
+  <div class="data-row"><span class="data-label">集群数</span><span class="data-value">12</span></div>
+  <div class="data-row"><span class="data-label">活跃组织</span><span class="data-value">5</span></div>
+  <div class="data-row"><span class="data-label">资源利用率</span><span class="data-value">67%</span></div>
+</div>`;
+        }
+
+        if (env === 'kubeblocks') {
+          return `kubeblocks.io 海外站目前处于早期数据接入阶段，部分指标暂不可用。已记录你的查询，数据就绪后会自动更新。`;
+        }
+
+        return `请选择一个具体环境（dev / apecloud.cn / kubeblocks.io）以获取运营洞察，或在通用模式下询问知识库问题。`;
+      }
+
+      // Knowledge base
+      if (isKb) {
+        if (/redis.*高可用|高可用.*redis/.test(q)) {
+          return `Redis 集群高可用推荐采用 KubeBlocks ClusterDefinition 方式部署：
+
+1. 创建 Redis Cluster 定义，指定副本数 ≥ 3。
+2. 启用哨兵模式（sentinel），自动故障转移。
+3. 配置持久化与资源配额。
+
+相关文档：KubeBlocks Redis 快速开始 →`;
+        }
+        if (/mysql.*postgresql|postgresql.*mysql|区别/.test(q)) {
+          return `MySQL 与 PostgreSQL 高可用方案对比：
+<div class="data-card">
+  <div class="data-title">方案对比</div>
+  <div class="data-row"><span class="data-label">MySQL</span><span class="data-value">Group Replication / MGR</span></div>
+  <div class="data-row"><span class="data-label">PostgreSQL</span><span class="data-value">Patroni + etcd</span></div>
+  <div class="data-row"><span class="data-label">故障转移</span><span class="data-value">自动</span></div>
+  <div class="data-row"><span class="data-label">数据一致性</span><span class="data-value">强一致</span></div>
+</div>
+建议根据团队技术栈选择：MySQL 更适合 OLTP 事务型业务，PostgreSQL 在复杂查询与扩展性上更优。`;
+        }
+        if (/备份/.test(q)) {
+          return `KubeBlocks 备份策略配置步骤：
+
+1. 启用备份策略：
+   <code>kbcli cluster backup-policy mycluster</code>
+2. 创建定时备份任务，支持全量与增量。
+3. 配置远程存储（S3/OSS/NFS）。
+4. 设置保留周期与告警规则。`;
+        }
+        if (/409/.test(q) || /error code/.test(q)) {
+          return `Error Code 409 通常表示资源冲突（Conflict）。常见原因：
+
+- 同名集群/组件已存在
+- 并发操作导致状态不一致
+- 目标资源正在被其他流程修改
+
+排查建议：检查资源名称是否重复，或等待当前操作完成后再试。`;
+        }
+        return `已收到你的技术问题。KubeBlocks 文档中心有相关说明，建议先查看官方文档；我也可以帮你继续细化排查步骤。`;
+      }
+
+      return `你好，我是 Chat2KB。我可以帮你查询 KubeBlocks 知识库或分析 Demo 环境数据。\n\n试试问我：\n• Redis 集群高可用怎么配置？\n• 本周高意向客户有哪些？\n• dev 环境资源利用率如何？`;
+    }
+
+    async function sendMessage(text) {
+      if (!text.trim() || isTyping) return;
+
+      // Remove suggestions on first user message
+      const suggestions = document.querySelector('.suggestions');
+      if (suggestions) suggestions.remove();
+
+      addMessage('user', text);
+      inputField.value = '';
+      inputField.style.height = 'auto';
+      isTyping = true;
+      sendBtn.disabled = true;
+
+      const typingEl = showTyping();
+
+      // Simulate network/think delay
+      await new Promise(r => setTimeout(r, 900 + Math.random() * 600));
+
+      removeTyping();
+      const response = generateResponse(text);
+      addMessage('ai', response, true);
+
+      isTyping = false;
+      sendBtn.disabled = false;
+      inputField.focus();
+    }
+
+    // ─── Event Listeners ───
+    sendBtn.addEventListener('click', () => sendMessage(inputField.value));
+
+    inputField.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(inputField.value);
+      }
+    });
+
+    inputField.addEventListener('input', () => {
+      inputField.style.height = 'auto';
+      inputField.style.height = Math.min(inputField.scrollHeight, 120) + 'px';
+    });
+
+    envSelect.addEventListener('change', (e) => {
+      setEnv(e.target.value);
+    });
+
+    // ─── Init ───
+    envSelect.value = currentEnv;
+    inputField.placeholder = envConfig[currentEnv].placeholder;
+
+    addMessage('ai', `你好！我是 Chat2KB 🤖\n已连接到 <strong>${envConfig[currentEnv].name}</strong> 环境。\n你可以询问客户行为、集群统计、资源利用率，或者 KubeBlocks 技术问题。`, true);
+    renderSuggestions();
+  </script>
+</body>
+</html>
