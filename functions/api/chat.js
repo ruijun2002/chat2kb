@@ -125,28 +125,38 @@ export async function onRequestPost(context) {
   let devData = null;
   let devApiOk = false;
 
-  if (
-    userEnv === 'dev' &&
-    env.ADMIN_DEV_API_BASE &&
-    env.ADMIN_DEV_API_USER &&
-    env.ADMIN_DEV_API_PASS
-  ) {
+  if (userEnv === 'dev' && env.ADMIN_DEV_API_BASE) {
     const path = env.ADMIN_DEV_API_PATH || '/admin/v1/organizations';
     const adminUrl = `${env.ADMIN_DEV_API_BASE.replace(/\/$/, '')}${path}`;
     try {
-      const adminResp = await digestFetch(
-        adminUrl,
-        'GET',
-        env.ADMIN_DEV_API_USER,
-        env.ADMIN_DEV_API_PASS
-      );
+      let adminResp;
+      if (env.ADMIN_DEV_API_KEY) {
+        // 方式 1：Bearer Token
+        adminResp = await fetch(adminUrl, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${env.ADMIN_DEV_API_KEY}`,
+            Accept: 'application/json',
+          },
+        });
+      } else if (env.ADMIN_DEV_API_USER && env.ADMIN_DEV_API_PASS) {
+        // 方式 2：Digest 认证
+        adminResp = await digestFetch(
+          adminUrl,
+          'GET',
+          env.ADMIN_DEV_API_USER,
+          env.ADMIN_DEV_API_PASS
+        );
+      }
 
-      if (adminResp.ok) {
-        devData = await adminResp.json();
-        devApiOk = true;
-      } else {
-        const errText = await adminResp.text();
-        console.warn(`admin-dev API 调用失败: ${adminResp.status} ${errText}`);
+      if (adminResp) {
+        if (adminResp.ok) {
+          devData = await adminResp.json();
+          devApiOk = true;
+        } else {
+          const errText = await adminResp.text();
+          console.warn(`admin-dev API 调用失败: ${adminResp.status} ${errText}`);
+        }
       }
     } catch (e) {
       console.warn('admin-dev API 请求异常:', e.message);
@@ -156,7 +166,7 @@ export async function onRequestPost(context) {
   if (devApiOk && devData) {
     systemPrompt += `\n\n[dev 环境实时数据]\n${JSON.stringify(devData, null, 2)}\n\n请基于以上数据回答用户关于 dev 环境的问题。`;
   } else if (userEnv === 'dev') {
-    systemPrompt += `\n\n注意：当前 dev 环境的实时数据接口未配置或暂时不可用，请基于你的知识回答，并提示用户检查 ADMIN_DEV_API_BASE / ADMIN_DEV_API_USER / ADMIN_DEV_API_PASS。`;
+    systemPrompt += `\n\n注意：当前 dev 环境的实时数据接口未配置或暂时不可用，请基于你的知识回答，并提示用户检查 ADMIN_DEV_API_BASE / ADMIN_DEV_API_KEY（或 ADMIN_DEV_API_USER / ADMIN_DEV_API_PASS）。`;
   }
 
   const messages = [

@@ -114,18 +114,25 @@ chat2kb/
 |--------|------|
 | `KIMI_API_KEY` | Kimi (Moonshot) API Key |
 | `ADMIN_DEV_API_BASE` | dev 开发环境 admin API 根地址 |
+| `ADMIN_DEV_API_PATH` | dev admin API 路径，默认 `/admin/v1/organizations` |
+| `ADMIN_DEV_API_KEY` | dev admin API Bearer Token（优先使用） |
 | `ADMIN_DEV_API_USER` | dev admin API Digest 认证用户名 |
 | `ADMIN_DEV_API_PASS` | dev admin API Digest 认证密码 |
-| `ADMIN_DEV_API_PATH` | dev admin API 路径，默认 `/admin/v1/organizations` |
 
 ### dev admin API 接入说明
 
-`functions/api/chat.js` 已默认在 `userEnv === 'dev'` 时使用 **Digest 认证**调用：
+`functions/api/chat.js` 已默认在 `userEnv === 'dev'` 时调用 dev admin API：
 
-```
-GET ${ADMIN_DEV_API_BASE}${ADMIN_DEV_API_PATH}
-Authorization: Digest username="...", realm="...", ...
-```
+1. **优先 Bearer Token**：如果配置了 `ADMIN_DEV_API_KEY`
+   ```
+   GET ${ADMIN_DEV_API_BASE}${ADMIN_DEV_API_PATH}
+   Authorization: Bearer ${ADMIN_DEV_API_KEY}
+   ```
+2. **备选 Digest 认证**：如果配置了 `ADMIN_DEV_API_USER` 和 `ADMIN_DEV_API_PASS`
+   ```
+   GET ${ADMIN_DEV_API_BASE}${ADMIN_DEV_API_PATH}
+   Authorization: Digest username="...", ...
+   ```
 
 默认路径为 `/admin/v1/organizations`。如果实际接口路径、认证方式或返回结构不同，请修改 `functions/api/chat.js` 中的请求逻辑。
 
