@@ -2,14 +2,17 @@
  * Chat2KB Chat API (Cloudflare Pages Function)
  *
  * - 通用 / 知识库问题：直接调用 Kimi (Moonshot) 大模型
- * - dev 环境运营问题：使用 Digest 认证调用 api-dev.apecloud.cn admin API 获取实时数据，再交给 Kimi 总结
+ * - dev 环境运营问题：使用 Digest 认证（accessKey:secretKey）调用 ApeCloud admin API，
+ *   根据用户问题动态选择多个 endpoint 获取实时数据，再交给 Kimi 总结
  *
  * 依赖环境变量（通过 .dev.vars 或 wrangler secret 配置）：
  *   KIMI_API_KEY
- *   ADMIN_DEV_API_BASE
- *   ADMIN_DEV_API_USER
- *   ADMIN_DEV_API_PASS
- *   ADMIN_DEV_API_PATH   默认 /admin/v1/organizations
+ *   ADMIN_DEV_API_BASE       例如 https://api-dev.apecloud.cn/admin/v1/
+ *   ADMIN_DEV_ACCESS_KEY     API Key 的 accessKey（Digest 用户名）
+ *   ADMIN_DEV_SECRET_KEY     API Key 的 secretKey（Digest 密码）
+ *
+ * 认证文档：
+ *   https://console-dev.apecloud.cn/docs/developer-guides/api/adminapi/admin-api
  */
 
 import md5 from '../lib/md5.js';
@@ -91,6 +94,112 @@ async function digestFetch(url, method, username, password) {
   });
 }
 
+// ─── Admin API endpoint selection ───
+const ADMIN_ENDPOINTS = [
+  {
+    path: '/organizations',
+    keywords: ['组织', 'organization', 'org', '客户', '注册', 'company', '租户', 'tenant'],
+    default: true,
+  },
+  {
+    path: '/clusters',
+    keywords: ['集群', 'cluster', '实例', 'instance', '数据库', 'database'],
+    default: true,
+  },
+  {
+    path: '/environments',
+    keywords: ['环境', 'environment', 'env', '节点', 'node', '资源', 'resource'],
+    default: false,
+  },
+  {
+    path: '/users',
+    keywords: ['用户', 'user', '账号', 'account', '成员', 'member', '登录', '活跃', '沉默'],
+    default: false,
+  },
+  {
+    path: '/tasks',
+    keywords: ['任务', 'task', '作业', 'job', '运维', 'operation'],
+    default: false,
+  },
+  {
+    path: '/events',
+    keywords: ['事件', 'event', '告警', 'alert', '日志', 'log', '通知'],
+    default: false,
+  },
+  {
+    path: '/bills',
+    keywords: ['账单', 'bill', '费用', 'cost', '成本', 'billing', '计费'],
+    default: false,
+  },
+  {
+    path: '/backup-repos',
+    keywords: ['备份', 'backup', '仓库', 'repo', '恢复', 'restore'],
+    default: false,
+  },
+  {
+    path: '/alert-rules',
+    keywords: ['告警规则', 'alert rule', '告警策略', 'alert strategy'],
+    default: false,
+  },
+  {
+    path: '/engine-options',
+    keywords: ['引擎', 'engine', '版本', 'version', '配置', 'parameter'],
+    default: false,
+  },
+];
+
+function selectEndpoints(query) {
+  const q = query.toLowerCase();
+  const scored = ADMIN_ENDPOINTS.map((ep) => {
+    const score = ep.keywords.reduce((s, kw) => (q.includes(kw.toLowerCase()) ? s + 1 : s), 0);
+    return { ...ep, score };
+  });
+
+  // 默认始终拉取 /organizations 和 /clusters；再按关键词匹配追加前 3 个相关 endpoint
+  const selected = new Set(ADMIN_ENDPOINTS.filter((ep) => ep.default).map((ep) => ep.path));
+  const matched = scored
+    .filter((ep) => ep.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+  matched.forEach((ep) => selected.add(ep.path));
+  return Array.from(selected);
+}
+
+async function fetchDevAdminData(env, query) {
+  const base = (env.ADMIN_DEV_API_BASE || 'https://api-dev.apecloud.cn/admin/v1/').replace(/\/$/, '');
+  const username = env.ADMIN_DEV_ACCESS_KEY;
+  const password = env.ADMIN_DEV_SECRET_KEY;
+
+  if (!username || !password) {
+    throw new Error('ADMIN_DEV_ACCESS_KEY / ADMIN_DEV_SECRET_KEY 未配置');
+  }
+
+  const paths = selectEndpoints(query);
+  const results = {};
+
+  await Promise.all(
+    paths.map(async (path) => {
+      const url = `${base}${path}`;
+      try {
+        const resp = await digestFetch(url, 'GET', username, password);
+        if (resp.ok) {
+          const data = await resp.json();
+          results[path] = data;
+        } else {
+          const errText = await resp.text();
+          console.warn(`admin-dev API ${path} 失败: ${resp.status} ${errText}`);
+          results[path] = { error: `${resp.status}: ${errText}` };
+        }
+      } catch (e) {
+        console.warn(`admin-dev API ${path} 异常:`, e.message);
+        results[path] = { error: e.message };
+      }
+    })
+  );
+
+  return results;
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -122,53 +231,23 @@ export async function onRequestPost(context) {
 - 涉及对比、排名、利用率时使用列表或表格形式。
 - 如果数据不足，明确说明并给出建议。`;
 
-  let devData = null;
-  let devApiOk = false;
+  let adminData = null;
+  let adminDataOk = false;
 
   if (userEnv === 'dev' && env.ADMIN_DEV_API_BASE) {
-    let path = env.ADMIN_DEV_API_PATH || '/admin/v1/organizations';
-    // 如果配置的是 API base path（以 / 结尾），默认请求 organizations 资源
-    if (path.endsWith('/')) path += 'organizations';
-    const adminUrl = `${env.ADMIN_DEV_API_BASE.replace(/\/$/, '')}${path}`;
     try {
-      let adminResp;
-      if (env.ADMIN_DEV_API_KEY) {
-        // 方式 1：Bearer Token
-        adminResp = await fetch(adminUrl, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${env.ADMIN_DEV_API_KEY}`,
-            Accept: 'application/json',
-          },
-        });
-      } else if (env.ADMIN_DEV_API_USER && env.ADMIN_DEV_API_PASS) {
-        // 方式 2：Digest 认证
-        adminResp = await digestFetch(
-          adminUrl,
-          'GET',
-          env.ADMIN_DEV_API_USER,
-          env.ADMIN_DEV_API_PASS
-        );
-      }
-
-      if (adminResp) {
-        if (adminResp.ok) {
-          devData = await adminResp.json();
-          devApiOk = true;
-        } else {
-          const errText = await adminResp.text();
-          console.warn(`admin-dev API 调用失败: ${adminResp.status} ${errText}`);
-        }
-      }
+      adminData = await fetchDevAdminData(env, query);
+      // 只要有一个 endpoint 成功就算可用
+      adminDataOk = Object.values(adminData).some((v) => !v.error);
     } catch (e) {
       console.warn('admin-dev API 请求异常:', e.message);
     }
   }
 
-  if (devApiOk && devData) {
-    systemPrompt += `\n\n[dev 环境实时数据]\n${JSON.stringify(devData, null, 2)}\n\n请基于以上数据回答用户关于 dev 环境的问题。`;
+  if (adminDataOk && adminData) {
+    systemPrompt += `\n\n[dev 环境实时数据]\n${JSON.stringify(adminData, null, 2)}\n\n请基于以上数据回答用户关于 dev 环境的问题。`;
   } else if (userEnv === 'dev') {
-    systemPrompt += `\n\n注意：当前 dev 环境的实时数据接口未配置或暂时不可用，请基于你的知识回答，并提示用户检查 ADMIN_DEV_API_BASE / ADMIN_DEV_API_KEY（或 ADMIN_DEV_API_USER / ADMIN_DEV_API_PASS）。`;
+    systemPrompt += `\n\n注意：当前 dev 环境的实时数据接口未配置或暂时不可用，请基于你的知识回答，并提示用户检查 ADMIN_DEV_ACCESS_KEY / ADMIN_DEV_SECRET_KEY。`;
   }
 
   const messages = [
@@ -206,7 +285,8 @@ export async function onRequestPost(context) {
     return jsonResponse({
       content,
       env: userEnv,
-      source: devApiOk ? 'kimi+admin-dev' : 'kimi',
+      source: adminDataOk ? 'kimi+admin-dev' : 'kimi',
+      adminData: adminDataOk ? adminData : undefined,
     });
   } catch (e) {
     console.error('调用 Kimi 时发生异常:', e);

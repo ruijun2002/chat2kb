@@ -114,27 +114,24 @@ chat2kb/
 |--------|------|
 | `KIMI_API_KEY` | Kimi (Moonshot) API Key |
 | `ADMIN_DEV_API_BASE` | dev 开发环境 admin API 根地址，例如 `https://api-dev.apecloud.cn/admin/v1/` |
-| `ADMIN_DEV_API_PATH` | 资源路径，例如 `/organizations` |
-| `ADMIN_DEV_API_KEY` | dev admin API Bearer Token（优先使用） |
-| `ADMIN_DEV_API_USER` | dev admin API Digest 认证用户名 |
-| `ADMIN_DEV_API_PASS` | dev admin API Digest 认证密码 |
+| `ADMIN_DEV_ACCESS_KEY` | dev admin API Key 的 `accessKey`（Digest 用户名） |
+| `ADMIN_DEV_SECRET_KEY` | dev admin API Key 的 `secretKey`（Digest 密码） |
 
 ### dev admin API 接入说明
 
-`functions/api/chat.js` 已默认在 `userEnv === 'dev'` 时调用 dev admin API：
+根据官方文档，dev admin API 使用 **Digest 认证**，格式为：
 
-1. **优先 Bearer Token**：如果配置了 `ADMIN_DEV_API_KEY`
-   ```
-   GET ${ADMIN_DEV_API_BASE}${ADMIN_DEV_API_PATH}
-   Authorization: Bearer ${ADMIN_DEV_API_KEY}
-   ```
-2. **备选 Digest 认证**：如果配置了 `ADMIN_DEV_API_USER` 和 `ADMIN_DEV_API_PASS`
-   ```
-   GET ${ADMIN_DEV_API_BASE}${ADMIN_DEV_API_PATH}
-   Authorization: Digest username="...", ...
-   ```
+```bash
+curl --digest -u "accessKey:secretKey" https://api-dev.apecloud.cn/admin/v1/organizations
+```
 
-默认请求 `GET ${ADMIN_DEV_API_BASE}${ADMIN_DEV_API_PATH}`，例如 `https://api-dev.apecloud.cn/admin/v1/organizations`。如果实际接口路径、认证方式或返回结构不同，请修改 `functions/api/chat.js` 中的请求逻辑。
+`functions/api/chat.js` 会在 `userEnv === 'dev'` 时：
+
+1. 根据用户问题智能选择相关 endpoint（默认拉取 `/organizations`、`/clusters`，并按关键词匹配 `/environments`、`/users`、`/tasks`、`/events`、`/bills` 等）。
+2. 使用 `ADMIN_DEV_ACCESS_KEY` / `ADMIN_DEV_SECRET_KEY` 并行请求这些 endpoint。
+3. 将返回的实时数据注入 Kimi system prompt，由 Kimi 生成回答。
+
+如果 endpoint 路径或返回结构与预期不同，请修改 `functions/api/chat.js` 中的 `ADMIN_ENDPOINTS` 映射。
 
 ## 部署到 Cloudflare Pages
 
@@ -142,7 +139,7 @@ chat2kb/
 wrangler pages deploy .
 ```
 
-部署前请确保已在 Cloudflare Dashboard 中设置 `KIMI_API_KEY`、`ADMIN_DEV_API_BASE`、`ADMIN_DEV_API_KEY`。
+部署前请确保已在 Cloudflare Dashboard 中设置 `KIMI_API_KEY`、`ADMIN_DEV_API_BASE`、`ADMIN_DEV_ACCESS_KEY`、`ADMIN_DEV_SECRET_KEY`。
 
 ## License
 
