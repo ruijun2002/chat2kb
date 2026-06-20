@@ -46,6 +46,7 @@ npx serve .
 chat2kb/
 ├── index.html              # 落地页
 ├── chat.html               # 对话页
+├── changelog.html          # 更新日志
 ├── prd_chat2kb_landing.md  # 产品需求文档
 ├── README.md
 └── .gitignore
@@ -56,12 +57,18 @@ chat2kb/
 ### Landing Page
 
 - 动态粒子背景（Canvas 2D）
+- 更新日志入口，链接至 `changelog.html`
 - 固定导航栏滚动高斯模糊效果
 - 双引擎功能卡片 + 中间数据流动线
 - 三个 Demo 环境卡片（dev / apecloud.cn / kubeblocks.io）
 - 角色 × 场景标签切换
 - AI Native 技术亮点
 - CTA + Footer
+
+### Changelog Page
+
+- 时间线式版本记录
+- 与落地页一致的视觉风格与导航
 
 ### Chat Page
 

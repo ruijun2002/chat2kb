@@ -815,7 +815,7 @@
       max-width: 1280px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: 2fr repeat(4, 1fr);
+      grid-template-columns: 2fr repeat(3, 1fr);
       gap: 48px;
       margin-bottom: 48px;
     }
@@ -932,8 +932,7 @@
       <li><a href="#features">功能</a></li>
       <li><a href="#environments">环境</a></li>
       <li><a href="#usecases">场景</a></li>
-      <li><a href="#tech">技术</a></li>
-      <li><a href="https://github.com/apecloud" target="_blank">GitHub</a></li>
+      <li><a href="changelog.html">更新日志</a></li>
     </ul>
     <button class="mobile-menu-btn">☰</button>
     <a href="chat.html" class="nav-cta">开始对话</a>
@@ -1189,7 +1188,6 @@
         <button class="tab-btn" onclick="switchTab('sales')">销售代表</button>
         <button class="tab-btn" onclick="switchTab('cs')">客户成功</button>
         <button class="tab-btn" onclick="switchTab('admin')">平台管理员</button>
-        <button class="tab-btn" onclick="switchTab('pm')">产品经理</button>
         <button class="tab-btn" onclick="switchTab('dev')">开发者/DBA</button>
       </div>
 
@@ -1245,19 +1243,6 @@
         </div>
       </div>
 
-      <div id="tab-pm" class="tab-content">
-        <div class="scenario-card">
-          <div class="scenario-title">📊 场景 1：功能渗透分析</div>
-          <div class="scenario-query">"自动扩缩容功能的使用率是多少？"</div>
-          <div class="scenario-result">→ 功能使用分布 + 趋势变化 + 推广建议</div>
-        </div>
-        <div class="scenario-card">
-          <div class="scenario-title">🔄 场景 2：Onboarding 漏斗</div>
-          <div class="scenario-query">"客户 onboarding 漏斗各步转化率？"</div>
-          <div class="scenario-result">→ 注册→创建集群→配置→活跃 各步转化率 + 流失点分析</div>
-        </div>
-      </div>
-
       <div id="tab-dev" class="tab-content">
         <div class="scenario-card">
           <div class="scenario-title">📚 场景 1：技术文档速查</div>
@@ -1273,36 +1258,6 @@
     </div>
   </section>
 
-  <!-- Tech Highlights -->
-  <section class="section" id="tech">
-    <h2 class="section-title animate-on-scroll">原生为 AI 设计</h2>
-    <p class="section-subtitle animate-on-scroll">
-      不是 ChatGPT 套壳，是数据原生的对话引擎
-    </p>
-    <div class="tech-grid">
-      <div class="tech-card animate-on-scroll">
-        <div class="tech-icon">🧠</div>
-        <h4>意图路由</h4>
-        <p>自动识别查询意图并路由到正确数据源，知识问答 vs 运营洞察智能分流</p>
-      </div>
-      <div class="tech-card animate-on-scroll">
-        <div class="tech-icon">🔗</div>
-        <h4>上下文感知</h4>
-        <p>知道你在看哪个环境、哪个页面，不需要重复说明背景信息</p>
-      </div>
-      <div class="tech-card animate-on-scroll">
-        <div class="tech-icon">📊</div>
-        <h4>结构化输出</h4>
-        <p>不返回文字墙，返回数据卡片、可视化图表、可点击的下钻路径</p>
-      </div>
-      <div class="tech-card animate-on-scroll">
-        <div class="tech-icon">🛡️</div>
-        <h4>安全审计</h4>
-        <p>所有查询可追溯、可审计，敏感操作需授权，数据访问有边界</p>
-      </div>
-    </div>
-  </section>
-
   <!-- CTA Section -->
   <section class="cta-section" id="chat">
     <div class="cta-bg"></div>
@@ -1311,7 +1266,6 @@
       立即体验 Chat2KB，对话即洞察
     </p>
     <a href="chat.html" class="cta-btn">开始对话</a>
-    <a href="https://github.com/ruijun2002/chat2kb" target="_blank" class="cta-link">或查看 GitHub 源码 →</a>
   </section>
 
   <!-- Footer -->
@@ -1329,28 +1283,17 @@
         <a href="#features">功能介绍</a>
         <a href="#environments">环境矩阵</a>
         <a href="#usecases">使用场景</a>
-        <a href="#">更新日志</a>
+        <a href="changelog.html">更新日志</a>
       </div>
       <div class="footer-col">
         <h5>资源</h5>
-        <a href="#">文档中心</a>
-        <a href="#">API 参考</a>
-        <a href="#">最佳实践</a>
-        <a href="#">FAQ</a>
+        <a href="https://apecloud.cn/" target="_blank">KubeBlocks企业版</a>
+        <a href="https://kubeblocks.io/" target="_blank">KubeBlocks开源社区</a>
+        <a href="https://apecloud.cn/blog" target="_blank">技术博客</a>
       </div>
       <div class="footer-col">
         <h5>社区</h5>
         <a href="https://github.com/ruijun2002/chat2kb" target="_blank">GitHub</a>
-        <a href="#">Discord</a>
-        <a href="#">Twitter</a>
-        <a href="#">论坛</a>
-      </div>
-      <div class="footer-col">
-        <h5>关于</h5>
-        <a href="#">团队</a>
-        <a href="#">招聘</a>
-        <a href="#">联系我们</a>
-        <a href="#">品牌资源</a>
       </div>
     </div>
     <div class="footer-bottom">
