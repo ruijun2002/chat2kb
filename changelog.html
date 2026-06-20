@@ -429,6 +429,25 @@
 
       <article class="entry">
         <div class="entry-header">
+          <span class="version">v1.1.0</span>
+          <span class="date">2026-06-20</span>
+          <span class="badge feature">Feature</span>
+        </div>
+        <h2 class="entry-title">后端 API 集成与 Markdown 渲染</h2>
+        <ul class="entry-list">
+          <li>接入 Cloudflare Pages Functions 后端（<code>functions/api/chat.js</code>），实现 Kimi 大模型与 dev admin API 的统一调用入口。</li>
+          <li>支持 Digest 认证动态调用 dev admin API 多 endpoint（/organizations、/clusters、/environments、/users 等），按用户问题智能选择数据源。</li>
+          <li>新增 Bearer Token 回退认证，兼容多种 admin API 部署方式。</li>
+          <li>对话页面新增完整的 Markdown 渲染引擎，支持标题、粗体、斜体、行内/块级代码、表格、列表、引用、分隔线、链接等。</li>
+          <li>代码块支持一键复制、语言标签显示、滚动条优化。</li>
+          <li>新增 Markdown 卡片语法（<code>:::card</code> / <code>:::info</code> / <code>:::warning</code> / <code>:::success</code> / <code>:::danger</code>），让结构化数据展示更美观。</li>
+          <li>表格支持水平滚动，适配移动端。</li>
+          <li>AI 回复自动识别 Markdown 格式并渲染，本地 mock 与后端回复统一体验。</li>
+        </ul>
+      </article>
+
+      <article class="entry">
+        <div class="entry-header">
           <span class="version">v1.0.0</span>
           <span class="date">2026-06-17</span>
           <span class="badge major">Major</span>
