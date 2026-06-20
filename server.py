@@ -145,7 +145,7 @@ def default_settings():
 
 
 def init_db():
-    """Create the settings table and pre-fill defaults if empty."""
+    """Create the settings table and pre-fill / refresh defaults from .dev.vars."""
     conn = sqlite3.connect(DB_PATH)
     try:
         conn.execute(
@@ -158,6 +158,12 @@ def init_db():
                 conn.execute(
                     "INSERT INTO settings (key, value) VALUES (?, ?)",
                     (key, value),
+                )
+            elif value:
+                # If a setting is currently empty but .dev.vars provides a value, refill it.
+                conn.execute(
+                    "UPDATE settings SET value = ? WHERE key = ? AND (value IS NULL OR value = '')",
+                    (value, key),
                 )
         conn.commit()
     finally:
