@@ -113,8 +113,8 @@ chat2kb/
 | 变量名 | 说明 |
 |--------|------|
 | `KIMI_API_KEY` | Kimi (Moonshot) API Key |
-| `ADMIN_DEV_API_BASE` | dev 开发环境 admin API 根地址 |
-| `ADMIN_DEV_API_PATH` | dev admin API 路径；若以 `/` 结尾，则自动追加 `organizations` |
+| `ADMIN_DEV_API_BASE` | dev 开发环境 admin API 根地址，例如 `https://api-dev.apecloud.cn/admin/v1/` |
+| `ADMIN_DEV_API_PATH` | 资源路径，例如 `/organizations` |
 | `ADMIN_DEV_API_KEY` | dev admin API Bearer Token（优先使用） |
 | `ADMIN_DEV_API_USER` | dev admin API Digest 认证用户名 |
 | `ADMIN_DEV_API_PASS` | dev admin API Digest 认证密码 |
@@ -134,7 +134,7 @@ chat2kb/
    Authorization: Digest username="...", ...
    ```
 
-默认路径为 `/admin/v1/organizations`；配置为 `/admin/v1/` 时会自动请求 `/admin/v1/organizations`。如果实际接口路径、认证方式或返回结构不同，请修改 `functions/api/chat.js` 中的请求逻辑。
+默认请求 `GET ${ADMIN_DEV_API_BASE}${ADMIN_DEV_API_PATH}`，例如 `https://api-dev.apecloud.cn/admin/v1/organizations`。如果实际接口路径、认证方式或返回结构不同，请修改 `functions/api/chat.js` 中的请求逻辑。
 
 ## 部署到 Cloudflare Pages
 
