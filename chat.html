@@ -833,12 +833,38 @@
 
       const typingEl = showTyping();
 
-      // Simulate network/think delay
-      await new Promise(r => setTimeout(r, 900 + Math.random() * 600));
+      // Try backend API first; fallback to local mock if unavailable
+      let useBackend = false;
+      let backendData = null;
+      try {
+        const resp = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ env: currentEnv, query: text })
+        });
+        if (resp.ok) {
+          backendData = await resp.json();
+          useBackend = true;
+        }
+      } catch (e) {
+        console.warn('Backend API unavailable, using local mock:', e);
+      }
 
       removeTyping();
-      const response = generateResponse(text);
-      addMessage('ai', response, true);
+
+      if (useBackend) {
+        if (backendData.error) {
+          addMessage('ai', `⚠️ ${backendData.error}\n\n已切换为本地演示回复：\n\n${generateResponse(text)}`, true);
+        } else {
+          const rendered = escapeHtml(backendData.content).replace(/\n/g, '<br>');
+          addMessage('ai', rendered, true);
+        }
+      } else {
+        // Local mock
+        await new Promise(r => setTimeout(r, 400 + Math.random() * 400));
+        const response = generateResponse(text);
+        addMessage('ai', response, true);
+      }
 
       isTyping = false;
       sendBtn.disabled = false;

@@ -1,0 +1,10 @@
+name = "chat2kb"
+compatibility_date = "2026-06-17"
+
+# Cloudflare Pages 配置：静态资源输出目录为当前目录根
+pages_build_output_dir = "."
+
+# 本地开发时请在 .dev.vars 中配置以下变量：
+# KIMI_API_KEY
+# ADMIN_DEV_API_BASE
+# ADMIN_DEV_API_KEY
