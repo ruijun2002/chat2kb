@@ -451,6 +451,218 @@
       .suggestions { padding-left: 0; }
       .input-area { padding: 12px 16px 20px; }
     }
+    /* Markdown Content Styles inside AI Bubble */
+    .bubble .md-content h1, .bubble .md-content h2, .bubble .md-content h3,
+    .bubble .md-content h4, .bubble .md-content h5, .bubble .md-content h6 {
+      margin: 16px 0 10px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text-primary);
+    }
+    .bubble .md-content h1 { font-size: 18px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; }
+    .bubble .md-content h2 { font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 4px; }
+    .bubble .md-content h3 { font-size: 15px; }
+    .bubble .md-content h4 { font-size: 14px; }
+    .bubble .md-content h5 { font-size: 13px; }
+    .bubble .md-content h6 { font-size: 12px; color: var(--text-muted); }
+    .bubble .md-content p { margin: 0 0 10px; }
+    .bubble .md-content p:last-child { margin-bottom: 0; }
+    .bubble .md-content strong { color: var(--accent-cyan); font-weight: 600; }
+    .bubble .md-content em { color: var(--text-secondary); font-style: italic; }
+    .bubble .md-content ul, .bubble .md-content ol {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    .bubble .md-content li { margin: 4px 0; }
+    .bubble .md-content blockquote {
+      border-left: 3px solid var(--accent-cyan);
+      margin: 10px 0;
+      padding: 8px 14px;
+      background: rgba(0, 212, 255, 0.04);
+      border-radius: 0 8px 8px 0;
+      color: var(--text-secondary);
+    }
+    .bubble .md-content hr {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin: 16px 0;
+    }
+    .bubble .md-content a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(0,212,255,0.3);
+      transition: all 0.2s;
+    }
+    .bubble .md-content a:hover {
+      border-bottom: 1px solid var(--accent-cyan);
+    }
+    /* Inline code */
+    .bubble .md-content code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: rgba(0,212,255,0.08);
+      color: var(--accent-cyan);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(0,212,255,0.15);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    /* Code block */
+    .bubble .md-content pre {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 10px 0;
+      overflow-x: auto;
+      position: relative;
+    }
+    .bubble .md-content pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.6;
+      display: block;
+      white-space: pre;
+      word-break: normal;
+    }
+    /* Code block language label */
+    .bubble .md-content pre .code-lang {
+      position: absolute;
+      top: 0; right: 0;
+      padding: 2px 10px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.04);
+      border-bottom-left-radius: 6px;
+      border-left: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    /* Copy button */
+    .bubble .md-content pre .copy-btn {
+      position: absolute;
+      top: 28px;
+      right: 8px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-family: var(--font-sans);
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      cursor: pointer;
+      opacity: 0;
+      transition: all 0.2s;
+    }
+    .bubble .md-content pre:hover .copy-btn {
+      opacity: 1;
+    }
+    .bubble .md-content pre .copy-btn:hover {
+      color: var(--accent-cyan);
+      border-color: var(--border-hover);
+      background: rgba(0,212,255,0.08);
+    }
+    .bubble .md-content pre .copy-btn.copied {
+      color: var(--accent-green);
+      border-color: rgba(16,185,129,0.3);
+      background: rgba(16,185,129,0.08);
+      opacity: 1;
+    }
+    /* Table */
+    .bubble .md-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 13px;
+      overflow-x: auto;
+      display: block;
+    }
+    .bubble .md-content thead { display: table; width: 100%; }
+    .bubble .md-content tbody { display: table; width: 100%; }
+    .bubble .md-content th, .bubble .md-content td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .bubble .md-content th {
+      font-weight: 600;
+      color: var(--accent-cyan);
+      background: rgba(0,212,255,0.04);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .bubble .md-content tr:last-child td { border-bottom: none; }
+    .bubble .md-content tr:hover td { background: rgba(255,255,255,0.02); }
+    /* Markdown Card */
+    .bubble .md-content .md-card {
+      background: rgba(0, 212, 255, 0.04);
+      border: 1px solid rgba(0, 212, 255, 0.12);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 12px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .bubble .md-content .md-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--accent-cyan), var(--accent-purple));
+    }
+    .bubble .md-content .md-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bubble .md-content .md-card-title::before {
+      content: '◆';
+      font-size: 10px;
+    }
+    .bubble .md-content .md-card-body {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .bubble .md-content .md-card-body p { margin: 0; }
+    /* Info / Warning / Success cards */
+    .bubble .md-content .md-card.info { border-color: rgba(0,212,255,0.2); background: rgba(0,212,255,0.03); }
+    .bubble .md-content .md-card.info::before { background: var(--accent-cyan); }
+    .bubble .md-content .md-card.warning { border-color: rgba(245,158,11,0.2); background: rgba(245,158,11,0.03); }
+    .bubble .md-content .md-card.warning::before { background: var(--accent-orange); }
+    .bubble .md-content .md-card.warning .md-card-title { color: var(--accent-orange); }
+    .bubble .md-content .md-card.warning .md-card-title::before { content: '⚠'; font-size: 12px; }
+    .bubble .md-content .md-card.success { border-color: rgba(16,185,129,0.2); background: rgba(16,185,129,0.03); }
+    .bubble .md-content .md-card.success::before { background: var(--accent-green); }
+    .bubble .md-content .md-card.success .md-card-title { color: var(--accent-green); }
+    .bubble .md-content .md-card.success .md-card-title::before { content: '✓'; font-size: 12px; }
+    .bubble .md-content .md-card.danger { border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.03); }
+    .bubble .md-content .md-card.danger::before { background: #ef4444; }
+    .bubble .md-content .md-card.danger .md-card-title { color: #ef4444; }
+    .bubble .md-content .md-card.danger .md-card-title::before { content: '✗'; font-size: 12px; }
+    /* Scrollbar for code blocks */
+    .bubble .md-content pre::-webkit-scrollbar { height: 4px; }
+    .bubble .md-content pre::-webkit-scrollbar-track { background: var(--bg-primary); border-radius: 2px; }
+    .bubble .md-content pre::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 2px; }
+    /* Table wrapper for horizontal scroll */
+    .bubble .md-content .table-wrapper {
+      overflow-x: auto;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .bubble .md-content .table-wrapper table { display: table; margin: 0; }
+
   </style>
 </head>
 <body>
@@ -608,6 +820,185 @@
       return div.innerHTML;
     }
 
+    // ─── Markdown Renderer ───
+    function renderMarkdown(raw) {
+      if (!raw || typeof raw !== 'string') return '';
+
+      // Protect fenced code blocks
+      const codeBlocks = [];
+      let text = raw.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+        const langLabel = lang ? `<span class="code-lang">${lang}</span>` : '';
+        const safeCode = escapeHtml(code).replace(/<br>/g, '\n');
+        const idx = codeBlocks.length;
+        codeBlocks.push(`<pre>${langLabel}<code>${safeCode}</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>`);
+        return `\n___CODEBLOCK_${idx}___\n`;
+      });
+
+      // Protect inline code
+      const inlineCodes = [];
+      text = text.replace(/`([^`]+)`/g, (match, code) => {
+        const idx = inlineCodes.length;
+        inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
+        return `___INLINECODE_${idx}___`;
+      });
+
+      // Cards: :::card type title\ncontent\n:::
+      const cards = [];
+      text = text.replace(/:::(card|info|warning|success|danger)\s*(.+?)\n([\s\S]*?)\n:::/g, (match, type, title, body) => {
+        const idx = cards.length;
+        const cardType = type === 'card' ? '' : type;
+        const renderedBody = renderMarkdownBlock(body.trim());
+        cards.push(`<div class="md-card ${cardType}"><div class="md-card-title">${escapeHtml(title.trim())}</div><div class="md-card-body">${renderedBody}</div></div>`);
+        return `\n___CARD_${idx}___\n`;
+      });
+
+      // Process block-level elements
+      text = renderMarkdownBlock(text);
+
+      // Restore code blocks
+      text = text.replace(/___CODEBLOCK_(\d+)___/g, (match, idx) => codeBlocks[idx]);
+      // Restore inline code
+      text = text.replace(/___INLINECODE_(\d+)___/g, (match, idx) => inlineCodes[idx]);
+      // Restore cards
+      text = text.replace(/___CARD_(\d+)___/g, (match, idx) => cards[idx]);
+
+      return `<div class="md-content">${text}</div>`;
+    }
+
+    function renderMarkdownBlock(text) {
+      // Split into lines
+      const lines = text.split('\n');
+      const result = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        const line = lines[i];
+
+        // Empty line
+        if (!line.trim()) {
+          i++;
+          continue;
+        }
+
+        // Horizontal rule
+        if (/^(---|\*\*\*|___)\s*$/.test(line)) {
+          result.push('<hr>');
+          i++;
+          continue;
+        }
+
+        // Heading
+        const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+        if (headingMatch) {
+          const level = headingMatch[1].length;
+          result.push(`<h${level}>${renderInline(headingMatch[2])}</h${level}>`);
+          i++;
+          continue;
+        }
+
+        // Table
+        if (line.startsWith('|')) {
+          const tableLines = [];
+          while (i < lines.length && lines[i].startsWith('|')) {
+            tableLines.push(lines[i]);
+            i++;
+          }
+          // Skip separator row (| --- | --- |)
+          const dataRows = tableLines.filter((l, idx) => !/^\|[-\s|]+\|\s*$/.test(l));
+          if (dataRows.length > 0) {
+            const thead = dataRows[0];
+            const tbody = dataRows.slice(1);
+            const theadCells = thead.split('|').slice(1, -1).map(c => `<th>${renderInline(c.trim())}</th>`).join('');
+            const tbodyRows = tbody.map(row => {
+              const cells = row.split('|').slice(1, -1).map(c => `<td>${renderInline(c.trim())}</td>`).join('');
+              return `<tr>${cells}</tr>`;
+            }).join('');
+            result.push(`<div class="table-wrapper"><table><thead><tr>${theadCells}</tr></thead><tbody>${tbodyRows}</tbody></table></div>`);
+          }
+          continue;
+        }
+
+        // Unordered list
+        if (/^[-*+]\s+/.test(line)) {
+          const items = [];
+          while (i < lines.length && /^[-*+]\s+/.test(lines[i])) {
+            items.push(`<li>${renderInline(lines[i].replace(/^[-*+]\s+/, ''))}</li>`);
+            i++;
+          }
+          result.push(`<ul>${items.join('')}</ul>`);
+          continue;
+        }
+
+        // Ordered list
+        if (/^\d+\.\s+/.test(line)) {
+          const items = [];
+          while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
+            items.push(`<li>${renderInline(lines[i].replace(/^\d+\.\s+/, ''))}</li>`);
+            i++;
+          }
+          result.push(`<ol>${items.join('')}</ol>`);
+          continue;
+        }
+
+        // Blockquote
+        if (/^>\s*/.test(line)) {
+          const quoteLines = [];
+          while (i < lines.length && /^>\s*/.test(lines[i])) {
+            quoteLines.push(lines[i].replace(/^>\s*/, ''));
+            i++;
+          }
+          result.push(`<blockquote>${renderInline(quoteLines.join(' '))}</blockquote>`);
+          continue;
+        }
+
+        // Paragraph
+        const paraLines = [];
+        while (i < lines.length && lines[i].trim() && !lines[i].startsWith('#') && !lines[i].startsWith('|') && !/^[-*+]\s+/.test(lines[i]) && !/^\d+\.\s+/.test(lines[i]) && !/^>\s*/.test(lines[i]) && !/^(---|\*\*\*|___)\s*$/.test(lines[i])) {
+          paraLines.push(lines[i]);
+          i++;
+        }
+        if (paraLines.length > 0) {
+          result.push(`<p>${renderInline(paraLines.join(' '))}</p>`);
+        }
+      }
+
+      return result.join('');
+    }
+
+    function renderInline(text) {
+      // Bold: **text** or __text__
+      text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+      // Italic: *text* or _text_
+      text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      text = text.replace(/_(.+?)_/g, '<em>$1</em>');
+      // Strikethrough: ~~text~~
+      text = text.replace(/~~(.+?)~~/g, '<del>$1</del>');
+      // Links: [text](url)
+      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      // Auto links: <url>
+      text = text.replace(/<((https?:\/\/[^>]+))>/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+      // Line break
+      text = text.replace(/\n/g, '<br>');
+      return text;
+    }
+
+    // Copy code helper
+    window.copyCode = function(btn) {
+      const pre = btn.closest('pre');
+      const code = pre.querySelector('code');
+      if (code) {
+        navigator.clipboard.writeText(code.textContent).then(() => {
+          btn.textContent = '已复制';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+        }).catch(() => {
+          btn.textContent = '复制失败';
+          setTimeout(() => { btn.textContent = '复制'; }, 2000);
+        });
+      }
+    };
+
     function scrollToBottom() {
       chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
     }
@@ -616,10 +1007,17 @@
       const msg = document.createElement('div');
       msg.className = `message ${role}`;
       const avatarIcon = role === 'ai' ? '🤖' : '👤';
+      let bubbleContent = content;
+      if (!html) {
+        bubbleContent = escapeHtml(content);
+      } else if (role === 'ai' && !content.trim().startsWith('<')) {
+        // Raw text that looks like markdown: render it
+        bubbleContent = renderMarkdown(content);
+      }
       msg.innerHTML = `
         <div class="avatar">${avatarIcon}</div>
         <div>
-          <div class="bubble">${html ? content : escapeHtml(content)}</div>
+          <div class="bubble">${bubbleContent}</div>
           <div class="meta">${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})}</div>
         </div>
       `;
@@ -856,8 +1254,7 @@
         if (backendData.error) {
           addMessage('ai', `⚠️ ${backendData.error}\n\n已切换为本地演示回复：\n\n${generateResponse(text)}`, true);
         } else {
-          const rendered = escapeHtml(backendData.content).replace(/\n/g, '<br>');
-          addMessage('ai', rendered, true);
+          addMessage('ai', backendData.content, true);
         }
       } else {
         // Local mock
