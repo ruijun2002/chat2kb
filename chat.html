@@ -536,10 +536,10 @@
     }
     /* Code block */
     .bubble .md-content pre {
-      background: var(--bg-primary);
-      border: 1px solid var(--border-subtle);
+      background: #0d1117;
+      border: 1px solid rgba(255,255,255,0.08);
       border-radius: 10px;
-      padding: 14px 16px;
+      padding: 40px 16px 14px;
       margin: 10px 0;
       overflow-x: auto;
       position: relative;
@@ -555,30 +555,31 @@
       white-space: pre;
       word-break: normal;
     }
-    /* Code block language label */
+    /* Code block header bar */
     .bubble .md-content pre .code-lang {
       position: absolute;
-      top: 0; right: 0;
-      padding: 2px 10px;
-      font-size: 10px;
+      top: 0; left: 0;
+      padding: 8px 12px;
+      font-size: 11px;
       font-family: var(--font-mono);
-      color: var(--text-muted);
-      background: rgba(255,255,255,0.04);
-      border-bottom-left-radius: 6px;
-      border-left: 1px solid var(--border-subtle);
-      border-bottom: 1px solid var(--border-subtle);
+      font-weight: 600;
+      color: var(--accent-cyan);
+      background: rgba(0,212,255,0.08);
+      border-bottom-right-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     /* Copy button */
     .bubble .md-content pre .copy-btn {
       position: absolute;
-      top: 28px;
+      top: 6px;
       right: 8px;
       padding: 4px 10px;
       font-size: 11px;
       font-family: var(--font-sans);
       color: var(--text-muted);
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border-subtle);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
       border-radius: 6px;
       cursor: pointer;
       opacity: 0;
@@ -900,7 +901,7 @@
         const safeCode = escapeHtml(code).replace(/<br>/g, '\n');
         const idx = codeBlocks.length;
         codeBlocks.push(`<pre>${langLabel}<code>${safeCode}</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>`);
-        return `\n___CODEBLOCK_${idx}___\n`;
+        return `\n⟦CODEBLOCK_${idx}⟧\n`;
       });
 
       // Protect inline code
@@ -908,28 +909,34 @@
       text = text.replace(/`([^`]+)`/g, (match, code) => {
         const idx = inlineCodes.length;
         inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
-        return `___INLINECODE_${idx}___`;
+        return `⟦INLINECODE_${idx}⟧`;
       });
 
-      // Cards: :::card type title\ncontent\n:::
+      // Cards: :::card title\ncontent\n::: or :::info\ncontent\n:::
+      const defaultCardTitles = {
+        info: '信息',
+        warning: '警告',
+        success: '成功',
+        danger: '错误',
+        card: '卡片',
+      };
       const cards = [];
-      text = text.replace(/:::(card|info|warning|success|danger)\s*(.+?)\n([\s\S]*?)\n:::/g, (match, type, title, body) => {
+      text = text.replace(/:::(card|info|warning|success|danger)(?:[ \t]+([^\n]*))?[ \t]*\n([\s\S]*?)\n:::/g, (match, type, title, body) => {
         const idx = cards.length;
         const cardType = type === 'card' ? '' : type;
+        const cardTitle = title ? title.trim() : defaultCardTitles[type];
         const renderedBody = renderMarkdownBlock(body.trim());
-        cards.push(`<div class="md-card ${cardType}"><div class="md-card-title">${escapeHtml(title.trim())}</div><div class="md-card-body">${renderedBody}</div></div>`);
-        return `\n___CARD_${idx}___\n`;
+        cards.push(`<div class="md-card ${cardType}"><div class="md-card-title">${escapeHtml(cardTitle)}</div><div class="md-card-body">${renderedBody}</div></div>`);
+        return `\n⟦CARD_${idx}⟧\n`;
       });
 
-      // Process block-level elements
+      // Process block-level elements (code blocks and cards become raw HTML blocks)
+      text = text.replace(/⟦CODEBLOCK_(\d+)⟧/g, (match, idx) => codeBlocks[idx]);
+      text = text.replace(/⟦CARD_(\d+)⟧/g, (match, idx) => cards[idx]);
       text = renderMarkdownBlock(text);
 
-      // Restore code blocks
-      text = text.replace(/___CODEBLOCK_(\d+)___/g, (match, idx) => codeBlocks[idx]);
       // Restore inline code
-      text = text.replace(/___INLINECODE_(\d+)___/g, (match, idx) => inlineCodes[idx]);
-      // Restore cards
-      text = text.replace(/___CARD_(\d+)___/g, (match, idx) => cards[idx]);
+      text = text.replace(/⟦INLINECODE_(\d+)⟧/g, (match, idx) => inlineCodes[idx]);
 
       return `<div class="md-content">${text}</div>`;
     }
@@ -1020,9 +1027,20 @@
           continue;
         }
 
+        // Raw HTML block (e.g. local mock data cards)
+        if (line.startsWith('<')) {
+          const htmlLines = [];
+          while (i < lines.length && lines[i].trim() && (lines[i].startsWith('<') || /^\s+/.test(lines[i]))) {
+            htmlLines.push(lines[i]);
+            i++;
+          }
+          result.push(htmlLines.join('\n'));
+          continue;
+        }
+
         // Paragraph
         const paraLines = [];
-        while (i < lines.length && lines[i].trim() && !lines[i].startsWith('#') && !lines[i].startsWith('|') && !/^[-*+]\s+/.test(lines[i]) && !/^\d+\.\s+/.test(lines[i]) && !/^>\s*/.test(lines[i]) && !/^(---|\*\*\*|___)\s*$/.test(lines[i])) {
+        while (i < lines.length && lines[i].trim() && !lines[i].startsWith('#') && !lines[i].startsWith('|') && !/^[-*+]\s+/.test(lines[i]) && !/^\d+\.\s+/.test(lines[i]) && !/^>\s*/.test(lines[i]) && !/^(---|\*\*\*|___)\s*$/.test(lines[i]) && !lines[i].startsWith('<')) {
           paraLines.push(lines[i]);
           i++;
         }
