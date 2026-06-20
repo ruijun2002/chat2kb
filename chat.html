@@ -933,143 +933,130 @@
       // Process block-level elements (code blocks and cards become raw HTML blocks)
       text = text.replace(/⟦CODEBLOCK_(\d+)⟧/g, (match, idx) => codeBlocks[idx]);
       text = text.replace(/⟦CARD_(\d+)⟧/g, (match, idx) => cards[idx]);
-      text = renderMarkdownBlock(text);
 
-      // Restore inline code
-      text = text.replace(/⟦INLINECODE_(\d+)⟧/g, (match, idx) => inlineCodes[idx]);
+      function renderInline(text) {
+        // Restore inline code placeholders first so markers like _ aren't mangled
+        text = text.replace(/⟦INLINECODE_(\d+)⟧/g, (match, idx) => inlineCodes[idx]);
+        // Bold: **text** or __text__
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        // Italic: *text* or _text_
+        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        text = text.replace(/_(.+?)_/g, '<em>$1</em>');
+        // Strikethrough: ~~text~~
+        text = text.replace(/~~(.+?)~~/g, '<del>$1</del>');
+        // Links: [text](url)
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        // Auto links: <url>
+        text = text.replace(/<((https?:\/\/[^>]+))>/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+        // Line break
+        text = text.replace(/\n/g, '<br>');
+        return text;
+      }
+
+      function renderMarkdownBlock(text) {
+        const lines = text.split('\n');
+        const result = [];
+        let i = 0;
+
+        while (i < lines.length) {
+          const line = lines[i];
+
+          if (!line.trim()) { i++; continue; }
+
+          if (/^(---|\*\*\*|___)\s*$/.test(line)) {
+            result.push('<hr>');
+            i++;
+            continue;
+          }
+
+          const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+          if (headingMatch) {
+            const level = headingMatch[1].length;
+            result.push(`<h${level}>${renderInline(headingMatch[2])}</h${level}>`);
+            i++;
+            continue;
+          }
+
+          if (line.startsWith('|')) {
+            const tableLines = [];
+            while (i < lines.length && lines[i].startsWith('|')) {
+              tableLines.push(lines[i]);
+              i++;
+            }
+            const dataRows = tableLines.filter((l) => !/^\|[-\s|]+\|\s*$/.test(l));
+            if (dataRows.length > 0) {
+              const thead = dataRows[0];
+              const tbody = dataRows.slice(1);
+              const theadCells = thead.split('|').slice(1, -1).map(c => `<th>${renderInline(c.trim())}</th>`).join('');
+              const tbodyRows = tbody.map(row => {
+                const cells = row.split('|').slice(1, -1).map(c => `<td>${renderInline(c.trim())}</td>`).join('');
+                return `<tr>${cells}</tr>`;
+              }).join('');
+              result.push(`<div class="table-wrapper"><table><thead><tr>${theadCells}</tr></thead><tbody>${tbodyRows}</tbody></table></div>`);
+            }
+            continue;
+          }
+
+          if (/^[-*+]\s+/.test(line)) {
+            const items = [];
+            while (i < lines.length && /^[-*+]\s+/.test(lines[i])) {
+              items.push(`<li>${renderInline(lines[i].replace(/^[-*+]\s+/, ''))}</li>`);
+              i++;
+            }
+            result.push(`<ul>${items.join('')}</ul>`);
+            continue;
+          }
+
+          if (/^\d+\.\s+/.test(line)) {
+            const items = [];
+            while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
+              items.push(`<li>${renderInline(lines[i].replace(/^\d+\.\s+/, ''))}</li>`);
+              i++;
+            }
+            result.push(`<ol>${items.join('')}</ol>`);
+            continue;
+          }
+
+          if (/^>\s*/.test(line)) {
+            const quoteLines = [];
+            while (i < lines.length && /^>\s*/.test(lines[i])) {
+              quoteLines.push(lines[i].replace(/^>\s*/, ''));
+              i++;
+            }
+            result.push(`<blockquote>${renderInline(quoteLines.join(' '))}</blockquote>`);
+            continue;
+          }
+
+          if (line.startsWith('<')) {
+            const htmlLines = [];
+            while (i < lines.length && lines[i].trim() && (lines[i].startsWith('<') || /^\s+/.test(lines[i]))) {
+              htmlLines.push(lines[i]);
+              i++;
+            }
+            result.push(htmlLines.join('\n'));
+            continue;
+          }
+
+          const paraLines = [];
+          while (i < lines.length && lines[i].trim() && !lines[i].startsWith('#') && !lines[i].startsWith('|') && !/^[-*+]\s+/.test(lines[i]) && !/^\d+\.\s+/.test(lines[i]) && !/^>\s*/.test(lines[i]) && !/^(---|\*\*\*|___)\s*$/.test(lines[i]) && !lines[i].startsWith('<')) {
+            paraLines.push(lines[i]);
+            i++;
+          }
+          if (paraLines.length > 0) {
+            result.push(`<p>${renderInline(paraLines.join(' '))}</p>`);
+          }
+        }
+
+        return result.join('');
+      }
+
+      text = renderMarkdownBlock(text);
 
       return `<div class="md-content">${text}</div>`;
     }
 
-    function renderMarkdownBlock(text) {
-      // Split into lines
-      const lines = text.split('\n');
-      const result = [];
-      let i = 0;
-
-      while (i < lines.length) {
-        const line = lines[i];
-
-        // Empty line
-        if (!line.trim()) {
-          i++;
-          continue;
-        }
-
-        // Horizontal rule
-        if (/^(---|\*\*\*|___)\s*$/.test(line)) {
-          result.push('<hr>');
-          i++;
-          continue;
-        }
-
-        // Heading
-        const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
-        if (headingMatch) {
-          const level = headingMatch[1].length;
-          result.push(`<h${level}>${renderInline(headingMatch[2])}</h${level}>`);
-          i++;
-          continue;
-        }
-
-        // Table
-        if (line.startsWith('|')) {
-          const tableLines = [];
-          while (i < lines.length && lines[i].startsWith('|')) {
-            tableLines.push(lines[i]);
-            i++;
-          }
-          // Skip separator row (| --- | --- |)
-          const dataRows = tableLines.filter((l, idx) => !/^\|[-\s|]+\|\s*$/.test(l));
-          if (dataRows.length > 0) {
-            const thead = dataRows[0];
-            const tbody = dataRows.slice(1);
-            const theadCells = thead.split('|').slice(1, -1).map(c => `<th>${renderInline(c.trim())}</th>`).join('');
-            const tbodyRows = tbody.map(row => {
-              const cells = row.split('|').slice(1, -1).map(c => `<td>${renderInline(c.trim())}</td>`).join('');
-              return `<tr>${cells}</tr>`;
-            }).join('');
-            result.push(`<div class="table-wrapper"><table><thead><tr>${theadCells}</tr></thead><tbody>${tbodyRows}</tbody></table></div>`);
-          }
-          continue;
-        }
-
-        // Unordered list
-        if (/^[-*+]\s+/.test(line)) {
-          const items = [];
-          while (i < lines.length && /^[-*+]\s+/.test(lines[i])) {
-            items.push(`<li>${renderInline(lines[i].replace(/^[-*+]\s+/, ''))}</li>`);
-            i++;
-          }
-          result.push(`<ul>${items.join('')}</ul>`);
-          continue;
-        }
-
-        // Ordered list
-        if (/^\d+\.\s+/.test(line)) {
-          const items = [];
-          while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
-            items.push(`<li>${renderInline(lines[i].replace(/^\d+\.\s+/, ''))}</li>`);
-            i++;
-          }
-          result.push(`<ol>${items.join('')}</ol>`);
-          continue;
-        }
-
-        // Blockquote
-        if (/^>\s*/.test(line)) {
-          const quoteLines = [];
-          while (i < lines.length && /^>\s*/.test(lines[i])) {
-            quoteLines.push(lines[i].replace(/^>\s*/, ''));
-            i++;
-          }
-          result.push(`<blockquote>${renderInline(quoteLines.join(' '))}</blockquote>`);
-          continue;
-        }
-
-        // Raw HTML block (e.g. local mock data cards)
-        if (line.startsWith('<')) {
-          const htmlLines = [];
-          while (i < lines.length && lines[i].trim() && (lines[i].startsWith('<') || /^\s+/.test(lines[i]))) {
-            htmlLines.push(lines[i]);
-            i++;
-          }
-          result.push(htmlLines.join('\n'));
-          continue;
-        }
-
-        // Paragraph
-        const paraLines = [];
-        while (i < lines.length && lines[i].trim() && !lines[i].startsWith('#') && !lines[i].startsWith('|') && !/^[-*+]\s+/.test(lines[i]) && !/^\d+\.\s+/.test(lines[i]) && !/^>\s*/.test(lines[i]) && !/^(---|\*\*\*|___)\s*$/.test(lines[i]) && !lines[i].startsWith('<')) {
-          paraLines.push(lines[i]);
-          i++;
-        }
-        if (paraLines.length > 0) {
-          result.push(`<p>${renderInline(paraLines.join(' '))}</p>`);
-        }
-      }
-
-      return result.join('');
-    }
-
-    function renderInline(text) {
-      // Bold: **text** or __text__
-      text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
-      // Italic: *text* or _text_
-      text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
-      text = text.replace(/_(.+?)_/g, '<em>$1</em>');
-      // Strikethrough: ~~text~~
-      text = text.replace(/~~(.+?)~~/g, '<del>$1</del>');
-      // Links: [text](url)
-      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-      // Auto links: <url>
-      text = text.replace(/<((https?:\/\/[^>]+))>/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
-      // Line break
-      text = text.replace(/\n/g, '<br>');
-      return text;
-    }
-
+    // Copy code helper
     // Copy code helper
     window.copyCode = function(btn) {
       const pre = btn.closest('pre');
