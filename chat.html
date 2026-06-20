@@ -243,12 +243,15 @@
       color: var(--text-primary);
     }
 
+    .message.user > div:last-child {
+      width: min(560px, calc(100% - 60px));
+    }
     .message.user .bubble {
       background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(124,58,237,0.15));
       border: 1px solid var(--border-subtle);
       border-top-right-radius: 4px;
       color: var(--text-primary);
-      width: min(560px, calc(100% - 60px));
+      width: 100%;
     }
 
     .meta {
@@ -475,7 +478,8 @@
       .header-status span:last-child { display: none; }
       .chat-area { padding: 20px 16px 120px; }
       .bubble { max-width: calc(100% - 56px); padding: 12px 14px; font-size: 14px; }
-      .message.user .bubble { width: calc(100% - 56px); }
+      .message.user > div:last-child { width: calc(100% - 56px); }
+      .message.user .bubble { width: 100%; }
       .suggestions { padding-left: 0; }
       .input-area { padding: 12px 16px 20px; }
     }
