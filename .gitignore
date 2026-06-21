@@ -31,3 +31,6 @@ chat2kb.db
 # Python cache
 __pycache__/
 *.pyc
+
+# Temporary virtualenv for doc generation
+.yamlvenv/

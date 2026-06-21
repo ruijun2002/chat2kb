@@ -1,0 +1,34 @@
+# Create backup schedule
+
+## Overview
+
+- **Method:** `POST`
+- **Path:** `/admin/v1/organizations/{orgName}/clusters/{clusterName}/backupSchedules`
+- **Operation ID:** `createBackupSchedule`
+- **Tags:** backup, shared
+
+## Description
+
+_No description provided._
+
+## Parameters
+
+| Name | In | Required | Type | Description |
+|------|----|----------|------|-------------|
+| `orgName` | path | true | `string` | name of the org |
+| `clusterName` | path | true | `string` | name of the cluster |
+
+## Request Body
+
+**Content-Type:** `application/json`
+**Ref:** `#/components/schemas/backupScheduleCreate`
+
+_Required: true_
+
+## Responses
+
+| Status | Description | Schema |
+|--------|-------------|--------|
+| `200` | A successful response. | `application/json`: **Ref:** `#/components/schemas/backupSchedule`   |
+| `401` |  |  |
+| `403` |  |  |

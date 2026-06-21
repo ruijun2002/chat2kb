@@ -269,6 +269,81 @@
       text-align: right;
     }
 
+    /* ─── Process / Evidence Card ─── */
+    .process-card {
+      margin-top: 10px;
+      max-width: min(560px, calc(100% - 60px));
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      background: rgba(17, 24, 39, 0.7);
+      overflow: hidden;
+    }
+    .process-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: none;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .process-header:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+    }
+    .process-arrow {
+      transition: transform 0.2s;
+    }
+    .process-card.open .process-arrow {
+      transform: rotate(90deg);
+    }
+    .process-body {
+      display: none;
+      padding: 12px 14px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .process-card.open .process-body {
+      display: block;
+    }
+    .process-api {
+      margin-bottom: 14px;
+    }
+    .process-api:last-child {
+      margin-bottom: 0;
+    }
+    .process-api-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      margin-bottom: 6px;
+    }
+    .process-api-name.error {
+      color: #ef4444;
+    }
+    .process-api-result {
+      margin: 0;
+      padding: 10px 12px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .process-empty {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
     /* Typing */
     .typing {
       display: flex;
@@ -482,6 +557,7 @@
       .header-status span:last-child { display: none; }
       .chat-area { padding: 20px 16px 120px; }
       .bubble { max-width: calc(100% - 56px); padding: 12px 14px; font-size: 14px; }
+      .process-card { max-width: calc(100% - 56px); }
       .message.user > div:last-child { flex-shrink: 0; width: auto; }
       .message.user .bubble { width: auto; min-width: max-content; }
       .suggestions { padding-left: 0; }
@@ -718,6 +794,48 @@
       background: rgba(0,212,255,0.08);
     }
 
+    /* ─── Settings Modal ─── */
+    .settings-modal {
+      position: fixed; inset: 0; z-index: 1000;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+      padding: 24px;
+    }
+    .settings-modal.open { display: flex; }
+    .settings-modal-content {
+      position: relative;
+      width: min(900px, 94vw);
+      height: min(800px, 88vh);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .settings-modal-close {
+      position: absolute; top: 12px; right: 16px; z-index: 10;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-size: 24px; line-height: 1;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .settings-modal-close:hover {
+      color: var(--accent-cyan);
+      background: rgba(0,212,255,0.1);
+      border-color: var(--border-hover);
+    }
+    .settings-modal-iframe { flex: 1; width: 100%; border: 0; }
+
+    @media (max-width: 640px) {
+      .settings-modal { padding: 0; }
+      .settings-modal-content { width: 100%; height: 100%; border-radius: 0; }
+    }
+
     @media (max-width: 640px) {
       .header { padding: 0 16px; }
       .brand { font-size: 16px; }
@@ -758,20 +876,13 @@
           <span class="status-dot"></span>
           <span>AI Engine Online</span>
         </div>
-        <a href="settings.html" class="settings-btn" title="设置">
+        <button class="settings-btn" id="settingsBtn" title="设置" type="button">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
-        </a>
+        </button>
       </div>
-
-      <a href="settings.html" class="settings-btn" title="设置" type="button">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-        </svg>
-      </a>
     </header>
 
     <main class="chat-area" id="chatArea">
@@ -797,6 +908,14 @@
         </div>
       </div>
       <div class="input-hint">可在右上角「设置」中配置环境 API 与大模型 Key；未配置时回复为模拟数据</div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="settings-modal">
+    <div class="settings-modal-content">
+      <button id="settingsModalClose" class="settings-modal-close" type="button" aria-label="关闭">&times;</button>
+      <iframe id="settingsModalFrame" class="settings-modal-iframe" src="settings.html"></iframe>
     </div>
   </div>
 
@@ -1087,7 +1206,34 @@
       chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
     }
 
-    function addMessage(role, content, html = false) {
+    function buildProcessHtml(processData) {
+      const apis = Object.entries(processData);
+      if (apis.length === 0) {
+        return `<div class="process-card open">
+          <div class="process-header" type="button">
+            <span>🔍 查询过程</span>
+          </div>
+          <div class="process-body"><div class="process-empty">未触发 API 查询</div></div>
+        </div>`;
+      }
+      const items = apis.map(([path, result]) => {
+        const isError = result && typeof result === 'object' && result.error;
+        const display = JSON.stringify(result, null, 2);
+        return `<div class="process-api">
+          <div class="process-api-name ${isError ? 'error' : ''}">${escapeHtml(path)}${isError ? ' （失败）' : ''}</div>
+          <pre class="process-api-result">${escapeHtml(display)}</pre>
+        </div>`;
+      }).join('');
+      return `<div class="process-card">
+        <button class="process-header" type="button">
+          <span>🔍 查询过程（${apis.length} 个 API）</span>
+          <span class="process-arrow">▸</span>
+        </button>
+        <div class="process-body">${items}</div>
+      </div>`;
+    }
+
+    function addMessage(role, content, html = false, processData = null) {
       const msg = document.createElement('div');
       msg.className = `message ${role}`;
       const avatarIcon = role === 'ai' ? '🤖' : '👤';
@@ -1098,13 +1244,22 @@
         // Raw text that looks like markdown: render it
         bubbleContent = renderMarkdown(content);
       }
+      const processHtml = role === 'ai' && processData ? buildProcessHtml(processData) : '';
       msg.innerHTML = `
         <div class="avatar">${avatarIcon}</div>
         <div>
           <div class="bubble">${bubbleContent}</div>
+          ${processHtml}
           <div class="meta">${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})}</div>
         </div>
       `;
+      const processCard = msg.querySelector('.process-card');
+      if (processCard) {
+        const header = processCard.querySelector('.process-header');
+        if (header) {
+          header.addEventListener('click', () => processCard.classList.toggle('open'));
+        }
+      }
       chatContainer.appendChild(msg);
       scrollToBottom();
       return msg;
@@ -1336,9 +1491,9 @@
 
       if (useBackend) {
         if (backendData.error) {
-          addMessage('ai', `⚠️ ${backendData.error}\n\n已切换为本地演示回复：\n\n${generateResponse(text)}`, true);
+          addMessage('ai', `⚠️ ${backendData.error}\n\n已切换为本地演示回复：\n\n${generateResponse(text)}`, true, backendData.adminData);
         } else {
-          addMessage('ai', backendData.content, true);
+          addMessage('ai', backendData.content, true, backendData.adminData);
         }
       } else {
         // Local mock
@@ -1369,6 +1524,36 @@
 
     envSelect.addEventListener('change', (e) => {
       setEnv(e.target.value);
+    });
+
+    // ─── Settings Modal ───
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const settingsModalClose = document.getElementById('settingsModalClose');
+    const settingsModalFrame = document.getElementById('settingsModalFrame');
+
+    function openSettingsModal() {
+      settingsModalFrame.src = 'settings.html';
+      settingsModal.classList.add('open');
+    }
+    function closeSettingsModal() {
+      settingsModal.classList.remove('open');
+    }
+
+    settingsBtn.addEventListener('click', openSettingsModal);
+    settingsModalClose.addEventListener('click', closeSettingsModal);
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) closeSettingsModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && settingsModal.classList.contains('open')) {
+        closeSettingsModal();
+      }
+    });
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'closeSettings') {
+        closeSettingsModal();
+      }
     });
 
     // ─── Init ───

@@ -606,6 +606,11 @@
     llmTestBtn.addEventListener('click', testLlm);
     llmSaveBtn.addEventListener('click', saveLlm);
 
+    if (window.self !== window.top) {
+      const backBtn = document.querySelector('.back-btn');
+      if (backBtn) backBtn.style.display = 'none';
+    }
+
     loadSettings();
   </script>
 </body>

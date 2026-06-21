@@ -21,7 +21,7 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 
 # ─── Config ───
 DEFAULT_PORT = 8080
@@ -44,7 +44,7 @@ ADMIN_ENDPOINTS = [
     },
     {
         "path": "/environments",
-        "keywords": ["环境", "environment", "env", "节点", "node", "资源", "resource"],
+        "keywords": ["运行环境", "环境列表", "环境数量", "环境统计", "environment list", "environments", "节点", "node", "资源", "resource"],
         "default": False,
     },
     {
@@ -101,6 +101,38 @@ def load_dev_vars():
 
 
 ENV = load_dev_vars()
+
+# ─── Admin API catalog for LLM-driven workflow ───
+def load_api_catalog():
+    catalog_path = Path(__file__).parent / "api_catalog.json"
+    if not catalog_path.exists():
+        return []
+    try:
+        return json.loads(catalog_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"Failed to load api_catalog.json: {e}")
+        return []
+
+
+API_CATALOG = load_api_catalog()
+
+
+def load_readonly_api_ids():
+    """Parse ReadonlyAPI.md and return the set of allowed read-only operationIds."""
+    readonly_path = Path(__file__).parent / "ReadonlyAPI.md"
+    if not readonly_path.exists():
+        return set()
+    ids = set()
+    for line in readonly_path.read_text(encoding="utf-8").splitlines():
+        if "`GET`" not in line:
+            continue
+        m = re.search(r"`([^`]+)`\s*\|\s*`GET`", line)
+        if m:
+            ids.add(m.group(1))
+    return ids
+
+
+READONLY_IDS = load_readonly_api_ids()
 
 # ─── SQLite settings persistence ───
 DB_PATH = Path(__file__).parent / "chat2kb.db"
@@ -316,17 +348,245 @@ def test_llm_connection(api_key: str, model: str = None, base: str = None):
 
 
 def select_endpoints(query: str):
+    """Pick admin endpoints to query based on the user question.
+
+    - If the question clearly points to a single endpoint, return only that endpoint.
+    - Otherwise return all positively-scored endpoints, sorted by relevance.
+    - Fall back to the default endpoints only when nothing specific is matched.
+    """
     q = query.lower()
-    selected = {ep["path"] for ep in ADMIN_ENDPOINTS if ep.get("default")}
-    scored = []
+
+    # Strong single-intent patterns: when these are present, avoid broad defaults.
+    strong_patterns = {
+        "/clusters": ["集群数", "集群数量", "集群统计", "cluster count", "clusters", "有多少个集群", "集群列表"],
+        "/organizations": ["组织数", "组织数量", "组织统计", "organization count", "organizations", "有多少组织", "客户数", "客户数量"],
+        "/environments": ["环境数", "环境数量", "环境统计", "environment count", "environments", "有多少环境", "环境列表"],
+    }
+    for path, patterns in strong_patterns.items():
+        if any(p.lower() in q for p in patterns):
+            return [path]
+
+    # Score each endpoint by its keyword list.
+    scores = {}
     for ep in ADMIN_ENDPOINTS:
         score = sum(1 for kw in ep["keywords"] if kw.lower() in q)
         if score > 0:
-            scored.append((score, ep["path"]))
-    scored.sort(reverse=True)
-    for _, path in scored[:3]:
-        selected.add(path)
-    return list(selected)
+            scores[ep["path"]] = score
+
+    if scores:
+        # If one endpoint dominates with no close runner-up, return just that one.
+        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        top_path, top_score = ranked[0]
+        second_score = ranked[1][1] if len(ranked) > 1 else 0
+        if top_score >= 2 and second_score == 0:
+            return [top_path]
+
+        # If the question is about clusters, keep it focused on /clusters and skip
+        # loosely-matched endpoints like /environments from generic words such as "环境".
+        cluster_paths = {"/clusters"}
+        if cluster_paths.intersection(scores):
+            cluster_score = scores.get("/clusters", 0)
+            non_cluster_scores = {p: s for p, s in scores.items() if p not in cluster_paths}
+            if non_cluster_scores and cluster_score >= max(non_cluster_scores.values()):
+                return ["/clusters"]
+
+        return [p for p, _ in ranked]
+
+    # Nothing specific matched: use the default endpoints.
+    return [ep["path"] for ep in ADMIN_ENDPOINTS if ep.get("default")]
+
+
+def extract_json(text: str):
+    """Try to extract the first JSON array/object from an LLM response."""
+    text = text.strip()
+    # If wrapped in markdown fences, unwrap it.
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    # Find the first '[' or '{' block.
+    for start_char, end_char in (("[", "]"), ("{", "}")):
+        start = text.find(start_char)
+        if start != -1:
+            depth = 0
+            for i in range(start, len(text)):
+                if text[i] == start_char:
+                    depth += 1
+                elif text[i] == end_char:
+                    depth -= 1
+                    if depth == 0:
+                        try:
+                            return json.loads(text[start : i + 1])
+                        except json.JSONDecodeError:
+                            break
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return None
+
+
+def select_apis_by_llm(query: str, catalog: list, overrides: dict, env: str = "dev"):
+    """Ask the LLM to pick relevant Admin API calls for the user question."""
+    if not catalog:
+        return []
+
+    api_key = overrides.get("llmApiKey") or ENV.get("LLM_API_KEY") or ENV.get("DEEPSEEK_API_KEY") or ENV.get("KIMI_API_KEY", "")
+    model = overrides.get("llmModel") or ENV.get("LLM_MODEL") or KIMI_MODEL
+    base = resolve_llm_base(model, overrides.get("llmBase", ""))
+    if not api_key:
+        return []
+
+    # Only GET endpoints are callable by the workflow, so restrict the catalog.
+    get_catalog = [api for api in catalog if api.get("method") == "GET"]
+    catalog_lines = []
+    for api in get_catalog:
+        flag = " [requires path params]" if api.get("hasPathParams") else ""
+        query_params = [p["name"] for p in api.get("parameters", []) if p.get("in") == "query"]
+        qp = f" [query params: {', '.join(query_params)}]" if query_params else ""
+        line = f"- {api['method']} {api['path']} ({api['operationId']}) - {api['summary']}{flag}{qp}"
+        catalog_lines.append(line)
+    catalog_text = "\n".join(catalog_lines)
+
+    system_prompt = """You are an API planner for the ApeCloud Admin API.
+Your job is to analyze the user's natural-language question and select the minimal set of API calls needed to answer it.
+
+Rules:
+1. Only select APIs from the provided catalog.
+2. Prefer GET endpoints. Avoid endpoints that require path parameters (marked [requires path params]) unless the question explicitly provides the resource ID/name.
+3. If the question is broad, choose list endpoints that return the relevant data.
+4. If multiple related resources are needed, return multiple API calls in the order they should be executed.
+5. Only include queryParams when they are explicitly documented for that API (shown as [query params: ...]) AND the value is clearly provided or inferable from the question. Otherwise omit queryParams.
+6. Important: the user may mention "dev 环境" or similar. In this context "dev" is the deployment mode, NOT the platform environment resource name. Do NOT set envName="dev" unless the user explicitly names a platform environment such as "kb10" or "cloud-dev".
+7. Return ONLY a JSON array in the following format (no markdown, no explanation):
+[
+  {"operationId": "listClusters", "reason": "Need cluster list for the environment"}
+]
+queryParams and pathParams are optional."""
+
+    user_prompt = f"""User question: {query}
+Deployment environment: {env}
+
+Available APIs:
+{catalog_text}
+
+Select the APIs to call."""
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.2,
+        "stream": False,
+    }
+    result = llm_curl(api_key, base, payload)
+    if "error" in result:
+        print(f"API selection LLM error: {result['error']}")
+        return []
+    selected = extract_json(result.get("content", ""))
+    if not isinstance(selected, list):
+        print(f"API selection returned non-list: {selected}")
+        return []
+    valid = []
+    valid_ids = {api["operationId"] for api in catalog}
+    for item in selected:
+        if not isinstance(item, dict) or item.get("operationId") not in valid_ids:
+            continue
+        # Avoid mistaking the deployment mode (dev/apecloud/kubeblocks) for a
+        # platform environment resource name.
+        query_params = item.get("queryParams") or {}
+        if query_params.get("envName") == env:
+            query_params.pop("envName", None)
+            if not query_params:
+                item.pop("queryParams", None)
+        valid.append(item)
+    return valid
+
+
+def execute_api_workflow(selected_apis: list, base: str, username: str, password: str):
+    """Execute the selected API calls and collect their results."""
+    results = {}
+    for item in selected_apis:
+        operation_id = item.get("operationId")
+        api = next((a for a in API_CATALOG if a.get("operationId") == operation_id), None)
+        if not api:
+            results[operation_id] = {"error": "Unknown operationId"}
+            continue
+
+        path = api["path"]
+        if api.get("hasPathParams") and "{" in path:
+            path_params = item.get("pathParams", {})
+            try:
+                path = path.format(**path_params)
+            except KeyError as e:
+                results[operation_id] = {"error": f"Missing path parameter {e} for {api['path']}"}
+                continue
+
+        if api.get("method") != "GET":
+            results[operation_id] = {"error": f"Workflow only supports GET, got {api['method']}"}
+            continue
+
+        # Build the final URL. The catalog stores full OpenAPI paths; the configured
+        # admin base may already include the /admin/v1 prefix, so strip it from the
+        # path when both are present to avoid double prefixing.
+        base_url = base.rstrip("/")
+        api_path = path
+        if api_path.startswith("/admin/v1") and base_url.endswith("/admin/v1"):
+            api_path = api_path[len("/admin/v1"):]
+
+        def call_url(path):
+            u = base_url + path
+            allowed_query_names = {p["name"] for p in api.get("parameters", []) if p.get("in") == "query"}
+            query_params = item.get("queryParams") or {}
+            if query_params:
+                filtered = {k: v for k, v in query_params.items() if k in allowed_query_names}
+                if filtered:
+                    u = u + "?" + urlencode(filtered)
+            return digest_curl(u, username, password)
+
+        status, body = call_url(api_path)
+
+        # If the call failed and we sent query params, retry without them as a fallback.
+        if status != 200 and item.get("queryParams"):
+            status, body = digest_curl(base_url + api_path, username, password)
+
+        if status == 200:
+            try:
+                results[operation_id] = json.loads(body)
+            except json.JSONDecodeError:
+                results[operation_id] = {"raw": body}
+        else:
+            results[operation_id] = {"error": f"HTTP {status}: {body[:200]}"}
+    return results
+
+
+# ─── Read-only safety guard ───
+_MUTATION_VERBS = [
+    "create", "delete", "update", "patch", "put", "post",
+    "restart", "stop", "start", "enable", "disable", "restore",
+    "rebuild", "upgrade", "scale", "expand", "promote", "expose",
+    "lock", "unlock", "kill",
+    "创建", "删除", "更新", "修改", "新增", "添加", "重启", "停止",
+    "启动", "开启", "关闭", "恢复", "重建", "升级", "扩容", "缩容",
+    "锁定", "解锁", "杀掉",
+]
+
+_INFO_MARKERS = [
+    "如何", "怎么", "怎样", "what is", "how to", "how do",
+    "介绍", "说明", "什么是", "explain", "文档",
+]
+
+
+def is_mutation_query(query: str) -> bool:
+    """Detect whether the user is asking to perform a mutating admin operation."""
+    q = query.lower()
+    has_verb = any(kw in q for kw in _MUTATION_VERBS)
+    is_info = any(m.lower() in q for m in _INFO_MARKERS)
+    return has_verb and not is_info
 
 
 def fetch_dev_admin_data(query: str, overrides=None):
@@ -368,8 +628,9 @@ def call_llm(query: str, env: str, admin_data=None, overrides=None):
 
 回答要求：
 - 用中文回答。
-- 给出结论前先列出关键数据点。
+- 给出结论前先列出关键数据点，并以可视化方式展示（表格、列表、加粗指标等）。
 - 涉及对比、排名、利用率时使用列表或表格形式。
+- 如果提供了 API 原始数据，基于这些数据推理，不要编造。
 - 如果数据不足，明确说明并给出建议。"""
 
     admin_ok = admin_data and any(not isinstance(v, dict) or not v.get("error") for v in admin_data.values())
@@ -474,12 +735,37 @@ class Chat2KBHandler(BaseHTTPRequestHandler):
                 if data.get(k):
                     overrides[k] = data[k]
 
+            # ─── Read-only guard for non-general environments ───
+            if user_env != "general" and is_mutation_query(query):
+                self._send_json(200, {
+                    "content": "⚠️ 当前环境只支持只读查询，无法执行创建、修改、删除等操作。如需执行此类操作，请通过控制台进行。",
+                    "env": user_env,
+                    "source": "readonly-guard",
+                })
+                return
+
             admin_data = None
-            if user_env == "dev":
+            if user_env != "general":
                 try:
-                    admin_data = fetch_dev_admin_data(query, overrides)
+                    base = (overrides.get("adminBase") or ENV.get("ADMIN_DEV_API_BASE") or DEV_API_BASE).rstrip("/")
+                    username = overrides.get("adminAccessKey") or ENV.get("ADMIN_DEV_ACCESS_KEY", "")
+                    password = overrides.get("adminSecretKey") or ENV.get("ADMIN_DEV_SECRET_KEY", "")
+                    if username and password:
+                        # Only allow APIs explicitly listed in ReadonlyAPI.md.
+                        readonly_catalog = [
+                            api for api in API_CATALOG
+                            if api.get("operationId") in READONLY_IDS
+                        ]
+                        if readonly_catalog:
+                            selected = select_apis_by_llm(query, readonly_catalog, overrides, env=user_env)
+                            if selected:
+                                admin_data = execute_api_workflow(selected, base, username, password)
+                            else:
+                                admin_data = fetch_dev_admin_data(query, overrides)
+                        else:
+                            admin_data = fetch_dev_admin_data(query, overrides)
                 except Exception as e:
-                    print(f"dev admin API error: {e}")
+                    print(f"admin workflow error: {e}")
 
             result = call_llm(query, user_env, admin_data, overrides)
             # If Kimi itself returns an error dict, wrap it as a user-facing content
