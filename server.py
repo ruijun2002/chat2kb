@@ -636,6 +636,7 @@ def call_llm(query: str, env: str, admin_data=None, overrides=None):
 - 给出结论前先列出关键数据点，并以可视化方式展示（表格、列表、加粗指标等）。
 - 涉及对比、排名、利用率时使用列表或表格形式。
 - 如果提供了 API 原始数据，基于这些数据推理，不要编造。
+- 如果未提供实时 API 数据（通用知识库问题），请在每条关键信息后用 `[来源：...]` 标注来源，可选值包括 `KubeBlocks 官方文档`、`MySQL 官方文档`、`PostgreSQL 官方文档`、`Redis 官方文档`、`社区最佳实践` 等，以便用户验证依据。
 - 如果数据不足，明确说明并给出建议。"""
 
     admin_ok = admin_data and any(not isinstance(v, dict) or not v.get("error") for v in admin_data.values())
@@ -783,6 +784,10 @@ class Chat2KBHandler(BaseHTTPRequestHandler):
                         "source": "admin-dev-only",
                         "adminData": admin_data,
                     }
+
+            if user_env == "general" and "error" not in result:
+                result["content"] += "\n\n---\n**参考来源**：本回答基于大语言模型的通用知识及 KubeBlocks、MySQL、PostgreSQL、Redis 等官方文档与社区最佳实践整理生成，具体实现请以对应官方文档为准。"
+
             self._send_json(200, result)
         except Exception as e:
             self._send_json(500, {"error": f"服务器内部错误: {e}"})
