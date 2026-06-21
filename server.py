@@ -576,8 +576,13 @@ _MUTATION_VERBS = [
 ]
 
 _INFO_MARKERS = [
+    # knowledge-seeking phrases
     "如何", "怎么", "怎样", "what is", "how to", "how do",
     "介绍", "说明", "什么是", "explain", "文档",
+    # question words / particles that turn a verb into a fact query
+    "谁", "什么", "什么时候", "哪里", "为什么", "是否", "多少", "几个",
+    "who", "what", "when", "where", "why", "whether", "how many", "how much",
+    "吗", "？", "?", "呢", "呀",
 ]
 
 
