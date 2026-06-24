@@ -134,6 +134,21 @@ def load_readonly_api_ids():
 
 READONLY_IDS = load_readonly_api_ids()
 
+
+def load_adminapi_overview():
+    """Load the human-readable admin API overview for LLM planning."""
+    overview_path = Path(__file__).parent / "adminapi-overview.md"
+    if not overview_path.exists():
+        return ""
+    try:
+        return overview_path.read_text(encoding="utf-8")
+    except Exception as e:
+        print(f"Failed to load adminapi-overview.md: {e}")
+        return ""
+
+
+ADMINAPI_OVERVIEW = load_adminapi_overview()
+
 # ─── SQLite settings persistence ───
 DB_PATH = Path(__file__).parent / "chat2kb.db"
 
@@ -428,9 +443,9 @@ def extract_json(text: str):
         return None
 
 
-def select_apis_by_llm(query: str, catalog: list, overrides: dict, env: str = "dev"):
-    """Ask the LLM to pick relevant Admin API calls for the user question."""
-    if not catalog:
+def select_apis_by_llm(query: str, overview_text: str, overrides: dict, env: str = "dev"):
+    """Ask the LLM to pick relevant Admin API calls based on the human-readable overview."""
+    if not overview_text:
         return []
 
     api_key = overrides.get("llmApiKey") or ENV.get("LLM_API_KEY") or ENV.get("DEEPSEEK_API_KEY") or ENV.get("KIMI_API_KEY", "")
@@ -439,38 +454,31 @@ def select_apis_by_llm(query: str, catalog: list, overrides: dict, env: str = "d
     if not api_key:
         return []
 
-    # Only GET endpoints are callable by the workflow, so restrict the catalog.
-    get_catalog = [api for api in catalog if api.get("method") == "GET"]
-    catalog_lines = []
-    for api in get_catalog:
-        flag = " [requires path params]" if api.get("hasPathParams") else ""
-        query_params = [p["name"] for p in api.get("parameters", []) if p.get("in") == "query"]
-        qp = f" [query params: {', '.join(query_params)}]" if query_params else ""
-        line = f"- {api['method']} {api['path']} ({api['operationId']}) - {api['summary']}{flag}{qp}"
-        catalog_lines.append(line)
-    catalog_text = "\n".join(catalog_lines)
+    # All paths listed in the overview are read-only GET endpoints.
+    valid_paths = set(re.findall(r"GET\s+(/admin/v1/[^\s`|]+)", overview_text))
 
     system_prompt = """You are an API planner for the ApeCloud Admin API.
-Your job is to analyze the user's natural-language question and select the minimal set of API calls needed to answer it.
+You are given a markdown overview that lists all read-only (GET) APIs.
+Analyze the user's question and select the minimal set of API calls needed to answer it.
 
 Rules:
-1. Only select APIs from the provided catalog.
-2. Prefer GET endpoints. Avoid endpoints that require path parameters (marked [requires path params]) unless the question explicitly provides the resource ID/name.
-3. If the question is broad, choose list endpoints that return the relevant data.
-4. If multiple related resources are needed, return multiple API calls in the order they should be executed.
-5. Only include queryParams when they are explicitly documented for that API (shown as [query params: ...]) AND the value is clearly provided or inferable from the question. Otherwise omit queryParams.
-6. Important: the user may mention "dev 环境" or similar. In this context "dev" is the deployment mode, NOT the platform environment resource name. Do NOT set envName="dev" unless the user explicitly names a platform environment such as "kb10" or "cloud-dev".
-7. Return ONLY a JSON array in the following format (no markdown, no explanation):
+1. Only select GET API paths listed in the overview. Do not invent paths.
+2. Prefer broad list endpoints. Only use endpoints with path parameters (e.g., {orgName}, {clusterName}) if the question explicitly provides the resource name/id, or if you have already fetched that id from a previous list call.
+3. If multiple related resources are needed, return multiple API calls in the order they should be executed.
+4. Only include queryParams when the value is clearly provided or inferable from the question. Otherwise omit queryParams.
+5. Important: "dev" in the question refers to the deployment mode, NOT the platform environment resource name. Do NOT set envName="dev" unless the user explicitly names a platform environment such as "kb10" or "cloud-dev".
+6. Return ONLY a JSON array in the following format (no markdown, no explanation):
 [
-  {"operationId": "listClusters", "reason": "Need cluster list for the environment"}
+  {"path": "/admin/v1/clusters", "reason": "Need cluster list for the environment"},
+  {"path": "/admin/v1/organizations/{orgName}/clusters", "pathParams": {"orgName": "alal-test"}, "reason": "List clusters in a specific org"}
 ]
 queryParams and pathParams are optional."""
 
     user_prompt = f"""User question: {query}
 Deployment environment: {env}
 
-Available APIs:
-{catalog_text}
+Admin API Overview:
+{overview_text}
 
 Select the APIs to call."""
 
@@ -492,12 +500,14 @@ Select the APIs to call."""
         print(f"API selection returned non-list: {selected}")
         return []
     valid = []
-    valid_ids = {api["operationId"] for api in catalog}
     for item in selected:
-        if not isinstance(item, dict) or item.get("operationId") not in valid_ids:
+        if not isinstance(item, dict):
             continue
-        # Avoid mistaking the deployment mode (dev/apecloud/kubeblocks) for a
-        # platform environment resource name.
+        path = item.get("path", "")
+        if path not in valid_paths:
+            print(f"API selection returned unknown path: {path}")
+            continue
+        # Avoid mistaking the deployment mode for a platform environment name.
         query_params = item.get("queryParams") or {}
         if query_params.get("envName") == env:
             query_params.pop("envName", None)
@@ -511,56 +521,42 @@ def execute_api_workflow(selected_apis: list, base: str, username: str, password
     """Execute the selected API calls and collect their results."""
     results = {}
     for item in selected_apis:
-        operation_id = item.get("operationId")
-        api = next((a for a in API_CATALOG if a.get("operationId") == operation_id), None)
-        if not api:
-            results[operation_id] = {"error": "Unknown operationId"}
+        path = item.get("path", "")
+        if not path.startswith("/admin/v1"):
+            results[path] = {"error": "Invalid API path"}
             continue
 
-        path = api["path"]
-        if api.get("hasPathParams") and "{" in path:
-            path_params = item.get("pathParams", {})
-            try:
-                path = path.format(**path_params)
-            except KeyError as e:
-                results[operation_id] = {"error": f"Missing path parameter {e} for {api['path']}"}
-                continue
-
-        if api.get("method") != "GET":
-            results[operation_id] = {"error": f"Workflow only supports GET, got {api['method']}"}
+        # Fill path parameters if provided.
+        try:
+            rendered = path.format(**(item.get("pathParams") or {}))
+        except KeyError as e:
+            results[path] = {"error": f"Missing path parameter {e} for {path}"}
             continue
 
-        # Build the final URL. The catalog stores full OpenAPI paths; the configured
-        # admin base may already include the /admin/v1 prefix, so strip it from the
-        # path when both are present to avoid double prefixing.
+        # Build the final URL, avoiding double /admin/v1 prefix.
         base_url = base.rstrip("/")
-        api_path = path
-        if api_path.startswith("/admin/v1") and base_url.endswith("/admin/v1"):
-            api_path = api_path[len("/admin/v1"):]
+        if rendered.startswith("/admin/v1") and base_url.endswith("/admin/v1"):
+            rendered = rendered[len("/admin/v1"):]
+        url = base_url + rendered
 
-        def call_url(path):
-            u = base_url + path
-            allowed_query_names = {p["name"] for p in api.get("parameters", []) if p.get("in") == "query"}
-            query_params = item.get("queryParams") or {}
-            if query_params:
-                filtered = {k: v for k, v in query_params.items() if k in allowed_query_names}
-                if filtered:
-                    u = u + "?" + urlencode(filtered)
-            return digest_curl(u, username, password)
+        query_params = item.get("queryParams") or {}
+        if query_params:
+            url = url + "?" + urlencode(query_params)
 
-        status, body = call_url(api_path)
+        status, body = digest_curl(url, username, password)
 
-        # If the call failed and we sent query params, retry without them as a fallback.
-        if status != 200 and item.get("queryParams"):
-            status, body = digest_curl(base_url + api_path, username, password)
+        # If the call failed and we sent query params, retry without them.
+        if status != 200 and query_params:
+            url = base_url + rendered
+            status, body = digest_curl(url, username, password)
 
         if status == 200:
             try:
-                results[operation_id] = json.loads(body)
+                results[path] = json.loads(body)
             except json.JSONDecodeError:
-                results[operation_id] = {"raw": body}
+                results[path] = {"raw": body}
         else:
-            results[operation_id] = {"error": f"HTTP {status}: {body[:200]}"}
+            results[path] = {"error": f"HTTP {status}: {body[:200]}"}
     return results
 
 
@@ -757,13 +753,11 @@ class Chat2KBHandler(BaseHTTPRequestHandler):
                     username = overrides.get("adminAccessKey") or ENV.get("ADMIN_DEV_ACCESS_KEY", "")
                     password = overrides.get("adminSecretKey") or ENV.get("ADMIN_DEV_SECRET_KEY", "")
                     if username and password:
-                        # Only allow APIs explicitly listed in ReadonlyAPI.md.
-                        readonly_catalog = [
-                            api for api in API_CATALOG
-                            if api.get("operationId") in READONLY_IDS
-                        ]
-                        if readonly_catalog:
-                            selected = select_apis_by_llm(query, readonly_catalog, overrides, env=user_env)
+                        # Use the human-readable admin API overview to plan the
+                        # read-only workflow. Fall back to keyword selection if the
+                        # overview is missing or the planner returns nothing.
+                        if ADMINAPI_OVERVIEW:
+                            selected = select_apis_by_llm(query, ADMINAPI_OVERVIEW, overrides, env=user_env)
                             if selected:
                                 admin_data = execute_api_workflow(selected, base, username, password)
                             else:
